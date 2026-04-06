@@ -409,7 +409,7 @@ class WheelTrackerApp:
                  font=(FONT, 12, "bold"), fg=C_TEXT, bg=C_SURFACE).pack(side="left")
 
         tk.Label(count_row,
-                 text="  ·  $4.99–$9.99 = 1 entry · $10–$14.99 = 2 · $15+ = 3+",
+                 text="  ·  $4.99–$9.98 = 1 · $9.99–$14.98 = 2 · $14.99–$19.98 = 3 · $19.99+ = 4+",
                  font=(FONT, 10), fg=C_MUTED, bg=C_SURFACE).pack(side="left")
 
         # Names box
