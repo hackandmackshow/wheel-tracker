@@ -1,0 +1,14 @@
+build/
+dist/
+*.spec
+__pycache__/
+*.pyc
+AppIcon.iconset/
+AppIcon.icns
+AppIcon.ico
+venv/
+.DS_Store
+
+# Keep credentials out of git!
+SETUP_INSTRUCTIONS.txt
+*.json

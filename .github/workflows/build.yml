@@ -1,0 +1,116 @@
+name: Build Wheel Tracker
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # also lets you trigger a build manually from GitHub
+
+jobs:
+
+  # ── macOS → .app ─────────────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install google-api-python-client pillow pyinstaller
+
+      - name: Create .icns icon
+        run: |
+          python3 - << 'EOF'
+          from PIL import Image, ImageDraw
+          import os
+          img = Image.open("channel-logo.jpg").convert("RGBA")
+          mask = Image.new("L", img.size, 0)
+          ImageDraw.Draw(mask).ellipse((0, 0, img.size[0], img.size[1]), fill=255)
+          result = Image.new("RGBA", img.size, (0, 0, 0, 0))
+          result.paste(img, mask=mask)
+          result.save("logo.png", "PNG")
+          os.makedirs("AppIcon.iconset", exist_ok=True)
+          for s in [16, 32, 64, 128, 256, 512, 1024]:
+              result.resize((s, s), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}.png")
+              if s <= 512:
+                  result.resize((s*2, s*2), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}@2x.png")
+          EOF
+          iconutil -c icns AppIcon.iconset -o AppIcon.icns
+
+      - name: Build .app
+        run: |
+          pyinstaller --windowed \
+            --icon=AppIcon.icns \
+            --add-data "logo.png:." \
+            --hidden-import=tkinter \
+            --hidden-import=tkinter.ttk \
+            --hidden-import=tkinter.scrolledtext \
+            --hidden-import=googleapiclient.discovery \
+            --hidden-import=googleapiclient._helpers \
+            --hidden-import=googleapiclient.http \
+            --collect-all=googleapiclient \
+            --collect-all=google.auth \
+            --name "Wheel Tracker" \
+            wheel_tracker_gui.py
+
+      - name: Zip .app
+        run: cd dist && zip -r "Wheel-Tracker-Mac.zip" "Wheel Tracker.app"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wheel-Tracker-Mac
+          path: dist/Wheel-Tracker-Mac.zip
+
+
+  # ── Windows → .exe ───────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install google-api-python-client pillow pyinstaller
+
+      - name: Create .ico icon + logo.png
+        run: |
+          python -c "
+          from PIL import Image, ImageDraw
+          img = Image.open('channel-logo.jpg').convert('RGBA')
+          mask = Image.new('L', img.size, 0)
+          ImageDraw.Draw(mask).ellipse((0, 0, img.size[0], img.size[1]), fill=255)
+          result = Image.new('RGBA', img.size, (0, 0, 0, 0))
+          result.paste(img, mask=mask)
+          result.save('logo.png', 'PNG')
+          result.save('AppIcon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
+          print('Icons created.')
+          "
+
+      - name: Build .exe
+        run: |
+          pyinstaller --windowed `
+            --icon=AppIcon.ico `
+            "--add-data=logo.png;." `
+            --hidden-import=tkinter `
+            --hidden-import=tkinter.ttk `
+            --hidden-import=tkinter.scrolledtext `
+            --hidden-import=googleapiclient.discovery `
+            --hidden-import=googleapiclient._helpers `
+            --hidden-import=googleapiclient.http `
+            --collect-all=googleapiclient `
+            --collect-all=google.auth `
+            --name="Wheel Tracker" `
+            wheel_tracker_gui.py
+
+      - name: Zip Windows build
+        run: Compress-Archive -Path "dist\Wheel Tracker" -DestinationPath "dist\Wheel-Tracker-Windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Wheel-Tracker-Windows
+          path: dist/Wheel-Tracker-Windows.zip
