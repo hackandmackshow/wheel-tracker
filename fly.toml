@@ -1,8 +1,3 @@
-# fly.toml app configuration file generated for app-sparkling-water-9990 on 2026-04-13T00:45:01Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
 app = 'app-sparkling-water-9990'
 primary_region = 'iad'
 
