@@ -1,4 +1,4 @@
-app = 'app-sparkling-water-9990'
+app = 'wheel-tracker'
 primary_region = 'iad'
 
 [build]
