@@ -1,20 +1,23 @@
-# Fly.io config for Hack & Mack Wheel Tracker server
-# Replace "wheel-tracker-hackandmack" with your chosen app name
-# (must be globally unique on Fly.io)
+# fly.toml app configuration file generated for app-sparkling-water-9990 on 2026-04-13T00:45:01Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app            = "wheel-tracker-hackandmack"
-primary_region = "ord"   # Chicago — change if you prefer another region
+app = 'app-sparkling-water-9990'
+primary_region = 'iad'
 
 [build]
 
 [http_service]
-  internal_port       = 5000
-  force_https         = true
-  auto_stop_machines  = true   # scales to zero when idle — saves cost
-  auto_start_machines = true   # wakes up automatically on first request
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
   min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 256
