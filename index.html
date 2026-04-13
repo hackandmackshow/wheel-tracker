@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hack & Mack — Wheel Entry Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #111318;
+      --surface:   #1c1f27;
+      --surface2:  #252933;
+      --border:    #2e323d;
+      --orange:    #e8761e;
+      --orange-hv: #f28c34;
+      --text:      #f0f0f0;
+      --muted:     #8a8f9e;
+      --green:     #4caf7d;
+      --warn-bg:   #2a2010;
+      --warn-fg:   #e8b84b;
+      --red:       #e8233a;
+    }
+
+    body {
+      font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      width: 100%;
+      background: var(--surface);
+      border-top: 3px solid var(--orange);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 0;
+    }
+    .header-logo {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .header-logo-placeholder {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 18px; color: #fff;
+      flex-shrink: 0;
+    }
+    .header-title { font-size: 22px; font-weight: 800; color: var(--orange); }
+    .header-sub   { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Warning banner ── */
+    .banner {
+      width: 100%;
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+      padding: 10px 32px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Main card wrapper ── */
+    .main {
+      width: 100%;
+      max-width: 660px;
+      padding: 0 20px;
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* ── Section labels ── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 18px 0 6px;
+    }
+    .section-label span {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: var(--muted);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+
+    /* ── Form fields ── */
+    .field-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .field-row:last-child { margin-bottom: 0; }
+    .field-label {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+    }
+    input[type=text], input[type=password] {
+      width: 100%;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type=text]:focus, input[type=password]:focus {
+      border-color: var(--orange);
+    }
+    .field-hint {
+      grid-column: 2;
+      font-size: 11px;
+      color: var(--border);
+      margin-top: -8px;
+    }
+
+    /* ── Stream row ── */
+    .stream-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .stream-row input { flex: 1; min-width: 200px; }
+
+    /* ── Buttons ── */
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 7px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: .4; cursor: default; }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #fff;
+    }
+    .btn-primary:not(:disabled):hover { background: var(--orange-hv); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+    }
+    .btn-ghost:not(:disabled):hover { background: var(--border); color: var(--text); }
+
+    .btn-copy {
+      background: var(--orange);
+      color: #fff;
+      font-size: 15px;
+      padding: 12px 24px;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-copy:not(:disabled):hover { background: var(--orange-hv); }
+
+    /* ── Status row ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .3s;
+    }
+    .dot.connecting { background: var(--warn-fg); }
+    .dot.live       { background: var(--orange);  }
+    .dot.entry      { background: var(--green);   }
+    #status-text    { font-size: 13px; color: var(--muted); }
+
+    /* ── Manual add row ── */
+    .manual-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .manual-row input { flex: 1; }
+    .venmo-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    /* ── Entries ── */
+    .entries-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .entries-count {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .entries-rules {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .names-box {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 12px 14px;
+      min-height: 180px;
+      max-height: 320px;
+      overflow-y: auto;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .names-box:empty::before {
+      content: "Names will appear here as contributions come in…";
+      color: var(--border);
+      font-family: inherit;
+    }
+
+    /* ── Copy confirmation ── */
+    .copy-confirm {
+      text-align: center;
+      font-size: 13px;
+      color: var(--green);
+      font-weight: 600;
+      height: 20px;
+      margin-top: 8px;
+      transition: opacity .3s;
+    }
+
+    /* ── Live feed ── */
+    .feed {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .feed-item {
+      background: var(--surface2);
+      border-left: 3px solid var(--orange);
+      border-radius: 0 6px 6px 0;
+      padding: 8px 12px;
+      font-size: 13px;
+      animation: slideIn .25s ease;
+    }
+    .feed-item.venmo { border-left-color: #7c4dff; }
+    .feed-item .feed-name  { font-weight: 700; color: var(--text); }
+    .feed-item .feed-meta  { color: var(--muted); margin-left: 6px; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <img id="logo-img" class="header-logo" src="logo.png" alt=""
+       onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';" />
+  <div id="logo-fallback" class="header-logo-placeholder" style="display:none">H</div>
+  <div>
+    <div class="header-title">Hack &amp; Mack</div>
+    <div class="header-sub">Wheel Entry Tracker</div>
+  </div>
+</header>
+
+<!-- Warning -->
+<div class="banner">
+  ⚠ &nbsp;Start tracking as soon as your stream goes <strong>live</strong> — before the wheel segment begins.
+  Contributions made before you click Start won't be captured.
+</div>
+
+<main class="main">
+
+  <!-- Settings -->
+  <div class="section-label"><span>Settings</span></div>
+  <div class="card">
+    <div class="field-row">
+      <label class="field-label" for="api-key">YouTube API Key</label>
+      <input type="password" id="api-key" placeholder="AIza…" autocomplete="off" />
+    </div>
+    <div class="field-row">
+      <label class="field-label" for="server-url">Server URL</label>
+      <input type="text" id="server-url" placeholder="https://your-app.railway.app" autocomplete="off" />
+    </div>
+    <div class="field-row">
+      <span></span>
+      <span class="field-hint">All settings saved in your browser. Never shared.</span>
+    </div>
+  </div>
+
+  <!-- Stream -->
+  <div class="section-label"><span>Stream</span></div>
+  <div class="card">
+    <div class="stream-row">
+      <input type="text" id="video-url" placeholder="YouTube stream URL or video ID" />
+      <button class="btn-primary" id="start-btn" onclick="startTracking()">▶&nbsp; Start</button>
+      <button class="btn-ghost"   id="stop-btn"  onclick="stopTracking()" disabled>■&nbsp; Stop</button>
+    </div>
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Ready — enter your API key and paste your stream URL</span>
+    </div>
+  </div>
+
+  <!-- Venmo -->
+  <div class="section-label"><span>Venmo</span></div>
+  <div class="card">
+    <div id="venmo-auto-status" style="font-size:13px;color:var(--muted);margin-bottom:12px;display:none">
+      ● Auto-tracking via server
+    </div>
+    <div class="manual-row">
+      <input type="text" id="manual-name" placeholder="Add manually — contributor name" />
+      <input type="text" id="manual-amount" placeholder="Amount e.g. 5.00" style="max-width:130px" />
+      <button class="btn-ghost" onclick="addManual()">+ Add</button>
+    </div>
+    <p class="venmo-note" id="venmo-note">
+      Enter your Server URL in Settings to auto-track Venmo payments,
+      or add them manually here.
+    </p>
+  </div>
+
+  <!-- Live feed -->
+  <div class="section-label"><span>Live Feed</span></div>
+  <div class="card">
+    <ul class="feed" id="feed">
+    </ul>
+    <div id="feed-empty" style="font-size:13px;color:var(--muted);padding:4px 0">
+      Contributions will appear here in real time…
+    </div>
+  </div>
+
+  <!-- Entries -->
+  <div class="section-label"><span>Wheel Entries</span></div>
+  <div class="card">
+    <div class="entries-header">
+      <span class="entries-count" id="entries-count">0 entries</span>
+      <span class="entries-rules">$4.99–$9.98 = 1 · $9.99–$14.98 = 2 · $14.99–$19.98 = 3 · $19.99+ = 4+</span>
+    </div>
+    <div class="names-box" id="names-box"></div>
+    <button class="btn-copy" id="copy-btn" onclick="copyNames()" disabled>
+      📋 &nbsp;Copy Names to Clipboard
+    </button>
+    <div class="copy-confirm" id="copy-confirm"></div>
+  </div>
+
+</main>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const MIN_AMOUNT    = 4.99;
+  const ENTRY_PRICE   = 5.00;
+  const VENMO_POLL_MS = 20_000;
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let entries        = [];
+  let polling        = false;
+  let pageToken      = null;
+  let pollTimeout    = null;
+  let venmoInterval  = null;
+  let venmoSince     = 0;        // Unix timestamp of stream start
+  let venmoSeenIds   = new Set(); // deduplicate across polls
+
+  // ── Persist settings ──────────────────────────────────────────────────────────
+  const apiKeyInput    = document.getElementById("api-key");
+  const serverUrlInput = document.getElementById("server-url");
+
+  apiKeyInput.value    = localStorage.getItem("hm_api_key")     || "";
+  serverUrlInput.value = localStorage.getItem("hm_server_url")  || "";
+
+  apiKeyInput.addEventListener("input", () =>
+    localStorage.setItem("hm_api_key", apiKeyInput.value.trim()));
+  serverUrlInput.addEventListener("input", () =>
+    localStorage.setItem("hm_server_url", serverUrlInput.value.trim()));
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
+  function entriesForAmount(amount) {
+    if (amount < MIN_AMOUNT) return 0;
+    return Math.max(1, Math.floor((amount + 0.01) / ENTRY_PRICE));
+  }
+
+  function extractVideoId(raw) {
+    const m = raw.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : raw.trim();
+  }
+
+  function setStatus(text, dotClass = "") {
+    const dot = document.getElementById("dot");
+    dot.className = "dot " + dotClass;
+    document.getElementById("status-text").textContent = text;
+  }
+
+  function addFeedItem(name, amountStr, countStr, source) {
+    const feed  = document.getElementById("feed");
+    const empty = document.getElementById("feed-empty");
+    empty.style.display = "none";
+
+    const li = document.createElement("li");
+    li.className = "feed-item" + (source === "Venmo" ? " venmo" : "");
+    li.innerHTML = `<span class="feed-name">${escHtml(name)}</span>
+      <span class="feed-meta">${escHtml(amountStr)} · ${escHtml(countStr)} · ${escHtml(source)}</span>`;
+    feed.prepend(li);
+
+    // Keep feed to last 20 items
+    while (feed.children.length > 20) feed.removeChild(feed.lastChild);
+  }
+
+  function addEntries(name, amount, source) {
+    const n = entriesForAmount(amount);
+    if (n === 0) return;
+    for (let i = 0; i < n; i++) entries.push(name);
+    const countStr = `${n} ${n === 1 ? "entry" : "entries"}`;
+    addFeedItem(name, `$${amount.toFixed(2)}`, countStr, source);
+    refreshNamesBox();
+    flashDot();
+  }
+
+  function refreshNamesBox() {
+    const box = document.getElementById("names-box");
+    box.textContent = entries.join("\n");
+    const count = entries.length;
+    document.getElementById("entries-count").textContent =
+      `${count} ${count === 1 ? "entry" : "entries"}`;
+    document.getElementById("copy-btn").disabled = count === 0;
+  }
+
+  function flashDot() {
+    setStatus(
+      `${entries.length} ${entries.length === 1 ? "entry" : "entries"} collected`,
+      "entry"
+    );
+    setTimeout(() => { if (polling) setStatus("Tracking live…", "live"); }, 2000);
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // ── YouTube ───────────────────────────────────────────────────────────────────
+  async function getLiveChatId(videoId, apiKey) {
+    const url = `https://www.googleapis.com/youtube/v3/videos`
+      + `?part=liveStreamingDetails&id=${videoId}&key=${apiKey}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const items = data.items || [];
+    if (!items.length) throw new Error(`Video '${videoId}' not found. Check the URL.`);
+    const chatId = items[0]?.liveStreamingDetails?.activeLiveChatId;
+    if (!chatId) throw new Error(
+      "No active live chat found.\nMake sure your stream is live before clicking Start."
+    );
+    return chatId;
+  }
+
+  async function pollSuperchats(liveChatId, apiKey) {
+    if (!polling) return;
+
+    let url = `https://www.googleapis.com/youtube/v3/liveChatMessages`
+      + `?liveChatId=${liveChatId}&part=snippet,authorDetails&maxResults=200&key=${apiKey}`;
+    if (pageToken) url += `&pageToken=${pageToken}`;
+
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (data.error) {
+        setStatus(`API error: ${data.error.message}`, "");
+        return;
+      }
+
+      for (const item of data.items || []) {
+        if (item.snippet?.type !== "superChatEvent") continue;
+        const details = item.snippet.superChatDetails || {};
+        const amount  = parseInt(details.amountMicros || "0") / 1_000_000;
+        const name    = item.authorDetails?.displayName || "Unknown";
+        if (amount >= MIN_AMOUNT) addEntries(name, amount, "YouTube SC");
+      }
+
+      pageToken = data.nextPageToken || null;
+      const waitMs = Math.max(data.pollingIntervalMillis || 10000, 8000);
+      pollTimeout = setTimeout(() => pollSuperchats(liveChatId, apiKey), waitMs);
+
+    } catch (err) {
+      setStatus(`Poll error: ${err.message}`, "");
+      pollTimeout = setTimeout(() => pollSuperchats(liveChatId, apiKey), 15000);
+    }
+  }
+
+  // ── Venmo server polling ──────────────────────────────────────────────────────
+  async function pollVenmo(serverUrl) {
+    if (!polling) return;
+    try {
+      const url  = `${serverUrl}/api/venmo?since=${venmoSince}`;
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.error) {
+        console.warn("Venmo server error:", data.error);
+        return;
+      }
+
+      for (const entry of data.entries || []) {
+        if (venmoSeenIds.has(entry.id)) continue;
+        venmoSeenIds.add(entry.id);
+        addEntries(entry.name, entry.amount, "Venmo");
+      }
+    } catch (err) {
+      console.warn("Venmo poll failed:", err.message);
+    }
+  }
+
+  // ── Controls ──────────────────────────────────────────────────────────────────
+  async function startTracking() {
+    const apiKey    = document.getElementById("api-key").value.trim();
+    const rawUrl    = document.getElementById("video-url").value.trim();
+    const serverUrl = document.getElementById("server-url").value.trim().replace(/\/$/, "");
+
+    if (!apiKey) { alert("Please enter your YouTube API Key in Settings."); return; }
+    if (!rawUrl) { alert("Please paste your YouTube stream URL or video ID."); return; }
+
+    document.getElementById("start-btn").disabled = true;
+    document.getElementById("stop-btn").disabled  = false;
+    document.getElementById("video-url").disabled = true;
+
+    entries       = [];
+    pageToken     = null;
+    venmoSince    = Date.now() / 1000;
+    venmoSeenIds  = new Set();
+    refreshNamesBox();
+    document.getElementById("feed").innerHTML = "";
+    document.getElementById("feed-empty").style.display = "";
+
+    setStatus("Connecting to YouTube…", "connecting");
+
+    try {
+      const videoId    = extractVideoId(rawUrl);
+      const liveChatId = await getLiveChatId(videoId, apiKey);
+      polling = true;
+      setStatus("Tracking live…", "live");
+      pollSuperchats(liveChatId, apiKey);
+
+      // Start Venmo polling if server URL is set
+      if (serverUrl) {
+        document.getElementById("venmo-auto-status").style.display = "block";
+        document.getElementById("venmo-note").textContent =
+          "Auto-tracking Venmo payments via server. Add manually below if needed.";
+        pollVenmo(serverUrl); // immediate first check
+        venmoInterval = setInterval(() => pollVenmo(serverUrl), VENMO_POLL_MS);
+      }
+
+    } catch (err) {
+      setStatus(err.message, "");
+      stopTracking();
+      alert(err.message);
+    }
+  }
+
+  function stopTracking() {
+    polling = false;
+    if (pollTimeout)   clearTimeout(pollTimeout);
+    if (venmoInterval) clearInterval(venmoInterval);
+    venmoInterval = null;
+    document.getElementById("start-btn").disabled = false;
+    document.getElementById("stop-btn").disabled  = true;
+    document.getElementById("video-url").disabled = false;
+    document.getElementById("venmo-auto-status").style.display = "none";
+    setStatus("Stopped.", "");
+  }
+
+  // ── Manual add (Venmo) ────────────────────────────────────────────────────────
+  function addManual() {
+    const nameInput   = document.getElementById("manual-name");
+    const amountInput = document.getElementById("manual-amount");
+    const name   = nameInput.value.trim();
+    const amount = parseFloat(amountInput.value.replace(/[$,]/g, "").trim());
+
+    if (!name)        { alert("Please enter a name."); return; }
+    if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+    addEntries(name, amount, "Venmo");
+    nameInput.value   = "";
+    amountInput.value = "";
+    nameInput.focus();
+  }
+
+  // Allow Enter key in manual inputs
+  document.getElementById("manual-amount").addEventListener("keydown", e => {
+    if (e.key === "Enter") addManual();
+  });
+  document.getElementById("manual-name").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("manual-amount").focus();
+  });
+
+  // ── Copy ──────────────────────────────────────────────────────────────────────
+  function copyNames() {
+    navigator.clipboard.writeText(entries.join("\n")).then(() => {
+      const el = document.getElementById("copy-confirm");
+      el.textContent = "✓  Copied!";
+      setTimeout(() => el.textContent = "", 2500);
+    });
+  }
+</script>
+</body>
+</html>

@@ -12,3 +12,4 @@ venv/
 # Keep credentials out of git!
 SETUP_INSTRUCTIONS.txt
 *.json
+.fly/
