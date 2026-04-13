@@ -499,9 +499,9 @@
       </div>
       <!-- Paste previous session list -->
       <textarea class="import-area" id="import-textarea"
-        placeholder="Or paste a previous session's name list here (one name per line)…"></textarea>
+        placeholder="@Name → YouTube SC&#10;Name → Venmo&#10;One per line…"></textarea>
       <div class="import-footer">
-        <span class="import-hint">Each line = one entry · duplicates are fine</span>
+        <span class="import-hint">@Name = YouTube SC &nbsp;·&nbsp; Name = Venmo</span>
         <button class="btn-ghost" onclick="importNames()">Import List</button>
       </div>
     </div>
@@ -808,17 +808,16 @@
     const lines = ta.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) { alert("Nothing to import — paste a name list first."); return; }
 
-    let added = 0;
-    for (const name of lines) {
+    for (const line of lines) {
+      const isSC   = line.startsWith("@");
+      const name   = isSC ? line.slice(1).trim() : line;
+      const source = isSC ? "YouTube SC" : "Venmo";
+      if (!name) continue;
       entries.push(name);
-      added++;
+      addFeedItem(name, "manual", "1 entry", source);
     }
     refreshNamesBox();
-
-    // Single feed item summarising the import
-    addFeedItem(`${added} ${added === 1 ? "entry" : "entries"} imported`, "", "from backup list", "Import");
     flashDot();
-
     ta.value = "";
   }
 
