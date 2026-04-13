@@ -155,7 +155,7 @@
       max-height: 0;
       transition: max-height .3s ease;
     }
-    .collapsible.open { max-height: 400px; }
+    .collapsible.open { max-height: 600px; }
 
     /* ── Cards ── */
     .card {
@@ -267,6 +267,33 @@
     .dot.live       { background: var(--orange);  }
     .dot.entry      { background: var(--green);   }
     #status-text    { font-size: 12.5px; color: var(--muted); }
+
+    /* ── Superchat backup import ── */
+    .import-area {
+      width: 100%;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+      min-height: 90px;
+      transition: border-color .15s;
+    }
+    .import-area:focus { border-color: var(--orange); }
+    .import-area::placeholder { color: var(--muted); opacity: .5; font-family: inherit; }
+    .import-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .import-hint { font-size: 11.5px; color: var(--muted); opacity: .7; }
 
     /* ── Venmo section ── */
     .venmo-auto-row {
@@ -433,21 +460,51 @@
     </div>
   </div>
 
-  <!-- Venmo -->
-  <div class="section-row"><span class="section-tag">Venmo</span><div class="section-line"></div></div>
-  <div class="card">
-    <div class="venmo-auto-row" id="venmo-auto-status" style="display:none">
-      <div class="venmo-auto-dot"></div>
-      Auto-tracking payments via server
+  <!-- Venmo (collapsible) -->
+  <div class="section-row clickable" id="venmo-toggle" onclick="toggleVenmo()">
+    <span class="section-tag">Venmo</span>
+    <div class="section-line"></div>
+    <span class="section-chevron" id="venmo-chevron">▼</span>
+  </div>
+  <div class="collapsible" id="venmo-panel">
+    <div class="card">
+      <div class="venmo-auto-row" id="venmo-auto-status" style="display:none">
+        <div class="venmo-auto-dot"></div>
+        Auto-tracking payments via server
+      </div>
+      <div class="manual-row">
+        <input type="text" id="manual-name" placeholder="Contributor name" />
+        <input type="text" id="manual-amount" placeholder="Amount" style="max-width:110px" />
+        <button class="btn-ghost" onclick="addManual()">+ Add</button>
+      </div>
+      <p class="venmo-note" id="venmo-note">
+        Set your Server URL above to auto-track Venmo payments, or add them manually here.
+      </p>
     </div>
-    <div class="manual-row">
-      <input type="text" id="manual-name" placeholder="Contributor name" />
-      <input type="text" id="manual-amount" placeholder="Amount" style="max-width:110px" />
-      <button class="btn-ghost" onclick="addManual()">+ Add</button>
+  </div>
+
+  <!-- Superchat Backup (collapsible) -->
+  <div class="section-row clickable" id="backup-toggle" onclick="toggleBackup()">
+    <span class="section-tag">Manual Backup</span>
+    <div class="section-line"></div>
+    <span class="section-chevron" id="backup-chevron">▼</span>
+  </div>
+  <div class="collapsible" id="backup-panel">
+    <div class="card">
+      <!-- Single entry (name + amount) -->
+      <div class="manual-row" style="margin-bottom:14px">
+        <input type="text" id="sc-name" placeholder="Contributor name" />
+        <input type="text" id="sc-amount" placeholder="Amount" style="max-width:110px" />
+        <button class="btn-ghost" onclick="addSCManual()">+ Add</button>
+      </div>
+      <!-- Paste previous session list -->
+      <textarea class="import-area" id="import-textarea"
+        placeholder="Or paste a previous session's name list here (one name per line)…"></textarea>
+      <div class="import-footer">
+        <span class="import-hint">Each line = one entry · duplicates are fine</span>
+        <button class="btn-ghost" onclick="importNames()">Import List</button>
+      </div>
     </div>
-    <p class="venmo-note" id="venmo-note">
-      Set your Server URL above to auto-track Venmo payments, or add them manually here.
-    </p>
   </div>
 
   <!-- Live Feed -->
@@ -496,16 +553,29 @@
   serverUrlInput.addEventListener("input", () =>
     localStorage.setItem("hm_server_url", serverUrlInput.value.trim()));
 
-  // Auto-open settings if no server URL saved; otherwise collapsed
+  // ── Collapsible panels ───────────────────────────────────────────────────────
   const hasServerUrl = !!localStorage.getItem("hm_server_url");
   const settingsPanel   = document.getElementById("settings-panel");
   const settingsChevron = document.getElementById("settings-chevron");
+  const venmoPanel      = document.getElementById("venmo-panel");
+  const venmoChevron    = document.getElementById("venmo-chevron");
+  const backupPanel     = document.getElementById("backup-panel");
+  const backupChevron   = document.getElementById("backup-chevron");
 
   function toggleSettings() {
     const open = settingsPanel.classList.toggle("open");
     settingsChevron.classList.toggle("open", open);
   }
+  function toggleVenmo() {
+    const open = venmoPanel.classList.toggle("open");
+    venmoChevron.classList.toggle("open", open);
+  }
+  function toggleBackup() {
+    const open = backupPanel.classList.toggle("open");
+    backupChevron.classList.toggle("open", open);
+  }
 
+  // Settings: open if no URL saved; Venmo + Backup: start collapsed
   if (!hasServerUrl) {
     settingsPanel.classList.add("open");
     settingsChevron.classList.add("open");
@@ -708,6 +778,49 @@
   document.getElementById("manual-name").addEventListener("keydown", e => {
     if (e.key === "Enter") document.getElementById("manual-amount").focus();
   });
+
+  // ── Superchat manual add ──────────────────────────────────────────────────────
+  function addSCManual() {
+    const nameInput   = document.getElementById("sc-name");
+    const amountInput = document.getElementById("sc-amount");
+    const name   = nameInput.value.trim();
+    const amount = parseFloat(amountInput.value.replace(/[$,]/g, "").trim());
+
+    if (!name)        { alert("Please enter a name."); return; }
+    if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+    addEntries(name, amount, "YouTube SC");
+    nameInput.value   = "";
+    amountInput.value = "";
+    nameInput.focus();
+  }
+
+  document.getElementById("sc-amount").addEventListener("keydown", e => {
+    if (e.key === "Enter") addSCManual();
+  });
+  document.getElementById("sc-name").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("sc-amount").focus();
+  });
+
+  // ── Import previous session list ──────────────────────────────────────────────
+  function importNames() {
+    const ta    = document.getElementById("import-textarea");
+    const lines = ta.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) { alert("Nothing to import — paste a name list first."); return; }
+
+    let added = 0;
+    for (const name of lines) {
+      entries.push(name);
+      added++;
+    }
+    refreshNamesBox();
+
+    // Single feed item summarising the import
+    addFeedItem(`${added} ${added === 1 ? "entry" : "entries"} imported`, "", "from backup list", "Import");
+    flashDot();
+
+    ta.value = "";
+  }
 
   // ── Copy ──────────────────────────────────────────────────────────────────────
   function copyNames() {
