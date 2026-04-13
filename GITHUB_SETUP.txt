@@ -1,0 +1,122 @@
+═══════════════════════════════════════════════════════
+  Setting Up GitHub Actions
+  (Builds Mac + Windows apps automatically)
+═══════════════════════════════════════════════════════
+
+STEP 1 — Create a GitHub account (if you don't have one)
+──────────────────────────────────────────────────────────
+  https://github.com → Sign up (free)
+
+
+STEP 2 — Create a new private repository
+──────────────────────────────────────────
+  1. Go to https://github.com/new
+  2. Repository name: wheel-tracker (or anything you like)
+  3. Set it to Private
+  4. Leave everything else as-is → click "Create repository"
+
+
+STEP 3 — Push the project from your Mac
+─────────────────────────────────────────
+  In Terminal, navigate to your hack-and-mack-tools folder
+  and run these commands one by one:
+
+    git init
+    git add wheel_tracker_gui.py logo.png channel-logo.jpg index.html server.py requirements.txt Procfile .gitignore .github
+    git commit -m "Initial commit"
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USERNAME/wheel-tracker.git
+    git push -u origin main
+
+  (Replace YOUR_USERNAME with your actual GitHub username)
+  GitHub will ask for your username + password the first time.
+  Use a Personal Access Token as the password:
+    https://github.com/settings/tokens → Generate new token (classic)
+    → check "repo" scope → Generate → copy and use as password
+
+
+STEP 4 — Watch it build
+─────────────────────────
+  1. Go to your repo on GitHub
+  2. Click the "Actions" tab
+  3. You'll see a workflow called "Build Wheel Tracker" running
+  4. It takes about 5-8 minutes to build both platforms
+  5. When it's green ✓, click into it → scroll down to "Artifacts"
+  6. Download:
+       Wheel-Tracker-Mac.zip     → for your boyfriend
+       Wheel-Tracker-Windows.zip → for his partner
+
+
+STEP 5 — Updating the app in future
+─────────────────────────────────────
+  Any time you make changes to wheel_tracker_gui.py, just run:
+
+    git add wheel_tracker_gui.py
+    git commit -m "Update app"
+    git push
+
+  GitHub automatically rebuilds both versions. Come back to
+  the Actions tab in a few minutes to download the new zips.
+
+
+STEP 6 — Deploy the server on Fly.io (for Venmo auto-tracking)
+────────────────────────────────────────────────────────────────
+  PART A — One-time setup from your Mac (takes ~5 min)
+
+  1. Install the Fly.io CLI:
+       brew install flyctl
+
+  2. Sign up + log in:
+       fly auth signup       ← opens browser to create free account
+     or if you already have one:
+       fly auth login
+
+  3. In your hack-and-mack-tools folder, launch the app
+     (this registers it on Fly.io and sets credentials):
+       fly launch --no-deploy --name wheel-tracker-hackandmack
+
+     When prompted:
+       - Region: pick the closest one (ord = Chicago, lax = LA, etc.)
+       - Don't overwrite fly.toml if asked
+
+  4. Set your credentials as secrets (never stored in code):
+       fly secrets set YOUTUBE_API_KEY="your-youtube-api-key"
+       fly secrets set EMAIL_ADDRESS="hackandmackshow@gmail.com"
+       fly secrets set EMAIL_APP_PASSWORD="your-app-password"
+       fly secrets set CORS_ORIGIN="https://YOUR_USERNAME.github.io"
+
+  5. Get a Fly.io API token for GitHub Actions:
+       fly tokens create deploy -x 999999h
+     Copy the token that's printed.
+
+  6. Add the token to GitHub:
+     Go to your GitHub repo → Settings → Secrets and variables
+     → Actions → New repository secret:
+       Name:  FLY_API_TOKEN
+       Value: (paste the token from step 5)
+
+  After that, every git push auto-deploys the server to Fly.io.
+  Your server URL will be:
+    https://wheel-tracker-hackandmack.fly.dev
+
+  PART B — Add server URL to the web app
+
+  7. Open your GitHub Pages web app
+  8. Paste the Fly.io URL into the "Server URL" field in Settings
+  9. Done — Venmo payments will now be auto-tracked!
+
+
+STEP 7 — Enable GitHub Pages (for the web app)
+────────────────────────────────────────────────
+  In your GitHub repo → Settings → Pages
+  → Source: GitHub Actions → Save
+
+  Your web app will be live at:
+    https://YOUR_USERNAME.github.io/wheel-tracker/
+
+
+⚠  IMPORTANT — Keep credentials out of git
+────────────────────────────────────────────
+  The .gitignore is already set up to exclude SETUP_INSTRUCTIONS.txt
+  (which contains your API key and app password).
+  Never run "git add ." — always add files by name as shown above.

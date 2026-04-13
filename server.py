@@ -1,14 +1,14 @@
 """
 Hack & Mack — Wheel Tracker Server
 
-Checks Gmail for Venmo payment notifications and returns parsed entries.
-Deployed on Railway. YouTube superchats are handled client-side.
+Handles YouTube superchat polling and Venmo email checking.
+Deployed on Fly.io — all external API calls happen server-side (no CORS issues).
 
-Environment variables (set in Railway dashboard):
+Environment variables (set via: fly secrets set KEY=value):
+  YOUTUBE_API_KEY     — YouTube Data API v3 key from Google Cloud Console
   EMAIL_ADDRESS       — Gmail address that receives Venmo notifications
   EMAIL_APP_PASSWORD  — Gmail App Password (not your regular password)
   CORS_ORIGIN         — Your GitHub Pages URL, e.g. https://yourname.github.io
-                        Set to * to allow all origins during testing
 """
 
 import os
@@ -18,13 +18,12 @@ import email as email_lib
 import email.utils
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
-
-# Allow requests from your GitHub Pages URL.
-# Set CORS_ORIGIN env var to your GitHub Pages URL in Railway dashboard.
 CORS(app, origins=os.environ.get("CORS_ORIGIN", "*"))
 
+YOUTUBE_API_KEY  = os.environ.get("YOUTUBE_API_KEY", "")
 EMAIL_ADDRESS    = os.environ.get("EMAIL_ADDRESS", "")
 EMAIL_PASSWORD   = os.environ.get("EMAIL_APP_PASSWORD", "")
 
@@ -57,8 +56,87 @@ def parse_venmo_subject(subject: str):
 
 @app.route("/health")
 def health():
-    """Simple uptime check."""
-    return jsonify({"status": "ok"})
+    return jsonify({
+        "status":          "ok",
+        "youtube_ready":   bool(YOUTUBE_API_KEY),
+        "email_ready":     bool(EMAIL_ADDRESS and EMAIL_PASSWORD),
+    })
+
+
+@app.route("/api/superchats")
+def superchats():
+    """
+    Polls YouTube live chat for superchats.
+
+    First call — pass video_id to resolve the live chat:
+      GET /api/superchats?video_id=dQw4w9WgXcQ
+
+    Subsequent calls — pass live_chat_id + page_token:
+      GET /api/superchats?live_chat_id=xxx&page_token=yyy
+
+    Response:
+      {
+        "live_chat_id":        "...",
+        "entries":             [{"name": "...", "amount": 5.0, "amount_str": "$5.00"}, ...],
+        "next_page_token":     "...",
+        "polling_interval_ms": 10000,
+        "error":               null
+      }
+    """
+    if not YOUTUBE_API_KEY:
+        return jsonify({"entries": [], "error": "YouTube API key not configured on server."})
+
+    video_id     = request.args.get("video_id", "").strip()
+    live_chat_id = request.args.get("live_chat_id", "").strip()
+    page_token   = request.args.get("page_token", "").strip() or None
+
+    try:
+        yt = build("youtube", "v3", developerKey=YOUTUBE_API_KEY, cache_discovery=False)
+
+        # Resolve live chat ID from video ID on first call
+        if not live_chat_id:
+            if not video_id:
+                return jsonify({"entries": [], "error": "Provide video_id or live_chat_id."})
+            resp  = yt.videos().list(part="liveStreamingDetails", id=video_id).execute()
+            items = resp.get("items", [])
+            if not items:
+                return jsonify({"entries": [], "error": f"Video '{video_id}' not found."})
+            live_chat_id = items[0].get("liveStreamingDetails", {}).get("activeLiveChatId")
+            if not live_chat_id:
+                return jsonify({"entries": [], "error":
+                    "No active live chat found. Make sure the stream is live before clicking Start."})
+
+        # Fetch live chat messages
+        params = dict(liveChatId=live_chat_id, part="snippet,authorDetails", maxResults=200)
+        if page_token:
+            params["pageToken"] = page_token
+
+        resp    = yt.liveChatMessages().list(**params).execute()
+        entries = []
+
+        for item in resp.get("items", []):
+            snippet = item.get("snippet", {})
+            if snippet.get("type") != "superChatEvent":
+                continue
+            details = snippet.get("superChatDetails", {})
+            amount  = int(details.get("amountMicros", 0)) / 1_000_000
+            if amount >= 4.99:
+                entries.append({
+                    "name":       item["authorDetails"]["displayName"],
+                    "amount":     amount,
+                    "amount_str": details.get("amountDisplayString", f"${amount:.2f}"),
+                })
+
+        return jsonify({
+            "live_chat_id":        live_chat_id,
+            "entries":             entries,
+            "next_page_token":     resp.get("nextPageToken"),
+            "polling_interval_ms": resp.get("pollingIntervalMillis", 10000),
+            "error":               None,
+        })
+
+    except Exception as e:
+        return jsonify({"entries": [], "error": str(e)})
 
 
 @app.route("/api/venmo")
