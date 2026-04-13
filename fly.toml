@@ -1,10 +1,5 @@
-# Fly.io config for Hack & Mack Wheel Tracker server
-# Replace "wheel-tracker-hackandmack" with your chosen app name
-# (must be globally unique on Fly.io)
-
-app            = "wheel-tracker-hackandmack"
-primary_region = "ord"   # Chicago — change if you prefer another region
-
+app            = "wheel-tracker"
+primary_region = "iad"   
 [build]
 
 [http_service]
