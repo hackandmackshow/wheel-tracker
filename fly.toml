@@ -1,15 +1,18 @@
-app            = "wheel-tracker"
-primary_region = "iad"   
+app = 'app-sparkling-water-9990'
+primary_region = 'iad'
+
 [build]
 
 [http_service]
-  internal_port       = 5000
-  force_https         = true
-  auto_stop_machines  = true   # scales to zero when idle — saves cost
-  auto_start_machines = true   # wakes up automatically on first request
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
   min_machines_running = 0
+  processes = ['app']
 
 [[vm]]
-  memory = "256mb"
-  cpu_kind = "shared"
+  memory = '1gb'
+  cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 256
