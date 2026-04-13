@@ -22,7 +22,7 @@ STEP 3 — Push the project from your Mac
   and run these commands one by one:
 
     git init
-    git add wheel_tracker_gui.py logo.png channel-logo.jpg index.html server.py requirements.txt Procfile .gitignore .github
+    git add wheel_tracker_gui.py logo.png index.html server.py requirements.txt Dockerfile fly.toml .dockerignore .gitignore .github
     git commit -m "Initial commit"
     git branch -M main
     git remote add origin https://github.com/YOUR_USERNAME/wheel-tracker.git

@@ -3,3 +3,22 @@ fly.toml
 __pycache__/
 .envrc
 .venv/
+
+# Desktop app files (not needed by server)
+wheel_tracker_gui.py
+AppIcon.icns
+AppIcon.ico
+AppIcon.iconset/
+channel-logo.jpg
+
+# GitHub Actions / CI
+.github/
+
+# Docs and local-only files
+GITHUB_SETUP.txt
+HOW_TO_PACKAGE.txt
+SETUP_INSTRUCTIONS.txt
+*.spec
+build/
+dist/
+*.json

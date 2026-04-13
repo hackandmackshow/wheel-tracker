@@ -29,19 +29,14 @@ jobs:
       - name: Create .icns icon
         run: |
           python3 - << 'EOF'
-          from PIL import Image, ImageDraw
+          from PIL import Image
           import os
-          img = Image.open("channel-logo.jpg").convert("RGBA")
-          mask = Image.new("L", img.size, 0)
-          ImageDraw.Draw(mask).ellipse((0, 0, img.size[0], img.size[1]), fill=255)
-          result = Image.new("RGBA", img.size, (0, 0, 0, 0))
-          result.paste(img, mask=mask)
-          result.save("logo.png", "PNG")
+          img = Image.open("logo.png").convert("RGBA")
           os.makedirs("AppIcon.iconset", exist_ok=True)
           for s in [16, 32, 64, 128, 256, 512, 1024]:
-              result.resize((s, s), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}.png")
+              img.resize((s, s), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}.png")
               if s <= 512:
-                  result.resize((s*2, s*2), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}@2x.png")
+                  img.resize((s*2, s*2), Image.LANCZOS).save(f"AppIcon.iconset/icon_{s}x{s}@2x.png")
           EOF
           iconutil -c icns AppIcon.iconset -o AppIcon.icns
 
@@ -83,18 +78,13 @@ jobs:
       - name: Install dependencies
         run: pip install google-api-python-client pillow pyinstaller
 
-      - name: Create .ico icon + logo.png
+      - name: Create .ico icon
         run: |
           python -c "
-          from PIL import Image, ImageDraw
-          img = Image.open('channel-logo.jpg').convert('RGBA')
-          mask = Image.new('L', img.size, 0)
-          ImageDraw.Draw(mask).ellipse((0, 0, img.size[0], img.size[1]), fill=255)
-          result = Image.new('RGBA', img.size, (0, 0, 0, 0))
-          result.paste(img, mask=mask)
-          result.save('logo.png', 'PNG')
-          result.save('AppIcon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
-          print('Icons created.')
+          from PIL import Image
+          img = Image.open('logo.png').convert('RGBA')
+          img.save('AppIcon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
+          print('Icon created.')
           "
 
       - name: Build .exe
