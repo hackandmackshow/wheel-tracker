@@ -179,11 +179,11 @@ def tracker_thread(api_key, email_addr, app_password, video_id, msg_q, stop_evt)
     seen_uids: set = set()
     last_email_ts = 0.0
     poll_ms       = YT_POLL_INTERVAL * 1000
+    yt            = build("youtube", "v3", developerKey=api_key, cache_discovery=False)
 
     while not stop_evt.is_set():
         # YouTube
         try:
-            yt     = build("youtube", "v3", developerKey=api_key, cache_discovery=False)
             params = dict(liveChatId=live_chat_id, part="snippet,authorDetails",
                           maxResults=200)
             if page_token:

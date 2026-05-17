@@ -13,3 +13,6 @@ venv/
 SETUP_INSTRUCTIONS.txt
 *.json
 .fly/
+.env
+.env.*
+.envrc

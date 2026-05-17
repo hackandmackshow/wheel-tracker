@@ -1,4 +1,4 @@
-flask
-flask-cors
-gunicorn
-google-api-python-client
+flask>=3.0,<4
+flask-cors>=4.0
+gunicorn>=21.2
+google-api-python-client>=2.100

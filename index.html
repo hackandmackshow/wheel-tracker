@@ -20,7 +20,6 @@
       --green:     #4caf7d;
       --warn-bg:   #1e1a0e;
       --warn-fg:   #d4a23a;
-      --red:       #e8233a;
       --purple:    #7c4dff;
     }
 
@@ -32,22 +31,26 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 0 80px;
+      padding-bottom: 80px;
     }
 
-    /* ── Header ── */
+    /* ── Top chrome (header + tabs) ── */
+    .chrome {
+      width: 100%;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
     .header {
       width: 100%;
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 0 32px;
-      height: 64px;
+      padding: 0 24px;
+      height: 58px;
       display: flex;
       align-items: center;
-      gap: 14px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      gap: 12px;
     }
     .header::before {
       content: '';
@@ -57,39 +60,62 @@
       background: var(--orange);
     }
     .header-logo {
-      width: 36px; height: 36px;
+      width: 32px; height: 32px;
       border-radius: 50%;
       object-fit: cover;
       flex-shrink: 0;
     }
     .header-logo-placeholder {
-      width: 36px; height: 36px;
+      width: 32px; height: 32px;
       border-radius: 50%;
       background: var(--orange);
       display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 15px; color: #fff;
+      font-weight: 900; font-size: 14px; color: #fff;
       flex-shrink: 0;
     }
     .header-title {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
       color: var(--text);
       letter-spacing: -.01em;
     }
-    .header-title em {
-      color: var(--orange);
-      font-style: normal;
+    .header-title em { color: var(--orange); font-style: normal; }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      padding: 0 16px;
     }
-    .header-badge {
-      margin-left: auto;
-      font-size: 11px;
+    .tab {
+      padding: 10px 18px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-      letter-spacing: .03em;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+      user-select: none;
+      letter-spacing: .01em;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .tab:hover:not(.active) { color: var(--text); }
+    .tab.active {
+      color: var(--text);
+      border-bottom-color: var(--orange);
+    }
+    .tab-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: var(--orange);
+      color: #fff;
+      border-radius: 10px;
+      padding: 1px 6px;
+      letter-spacing: 0;
     }
 
     /* ── Notice bar ── */
@@ -98,35 +124,32 @@
       background: var(--warn-bg);
       border-bottom: 1px solid #3a2e0c;
       color: var(--warn-fg);
-      padding: 9px 32px;
-      font-size: 12.5px;
+      padding: 8px 24px;
+      font-size: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .notice-icon { flex-shrink: 0; font-size: 14px; }
+    .notice.hidden { display: none; }
 
-    /* ── Main ── */
-    .main {
+    /* ── Tab panels ── */
+    .tab-panel {
       width: 100%;
       max-width: 640px;
-      padding: 0 16px;
-      margin-top: 24px;
+      padding: 20px 16px 0;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
+    .tab-panel.hidden { display: none; }
 
-    /* ── Section rows ── */
+    /* ── Section labels ── */
     .section-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin: 20px 0 8px;
-      cursor: default;
-      user-select: none;
+      margin: 18px 0 8px;
     }
-    .section-row.clickable { cursor: pointer; }
     .section-tag {
       font-size: 10.5px;
       font-weight: 700;
@@ -135,27 +158,7 @@
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .section-line {
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-    .section-chevron {
-      font-size: 12px;
-      color: var(--muted);
-      transition: transform .25s ease;
-      flex-shrink: 0;
-      line-height: 1;
-    }
-    .section-chevron.open { transform: rotate(180deg); }
-
-    /* ── Collapsible wrapper ── */
-    .collapsible {
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height .3s ease;
-    }
-    .collapsible.open { max-height: 600px; }
+    .section-line { flex: 1; height: 1px; background: var(--border); }
 
     /* ── Cards ── */
     .card {
@@ -174,12 +177,8 @@
       margin-bottom: 10px;
     }
     .field-row:last-child { margin-bottom: 0; }
-    .field-label {
-      font-size: 12.5px;
-      color: var(--muted);
-      text-align: right;
-    }
-    input[type=text], input[type=password] {
+    .field-label { font-size: 12.5px; color: var(--muted); text-align: right; }
+    input[type=text], input[type=password], textarea {
       width: 100%;
       background: var(--surface2);
       color: var(--text);
@@ -191,7 +190,7 @@
       outline: none;
       transition: border-color .15s;
     }
-    input[type=text]:focus, input[type=password]:focus {
+    input[type=text]:focus, input[type=password]:focus, textarea:focus {
       border-color: var(--orange);
     }
     .field-hint {
@@ -202,54 +201,14 @@
       margin-top: -6px;
     }
 
-    /* ── Stream row ── */
+    /* ── Stream card ── */
     .stream-row {
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
-    .stream-row input { flex: 1; min-width: 200px; }
-
-    /* ── Buttons ── */
-    button {
-      font-family: inherit;
-      font-size: 13.5px;
-      font-weight: 700;
-      border: none;
-      border-radius: 7px;
-      padding: 9px 16px;
-      cursor: pointer;
-      transition: background .15s, opacity .15s;
-      white-space: nowrap;
-    }
-    button:disabled { opacity: .35; cursor: default; }
-
-    .btn-primary {
-      background: var(--orange);
-      color: #fff;
-    }
-    .btn-primary:not(:disabled):hover { background: var(--orange-hv); }
-
-    .btn-ghost {
-      background: var(--surface2);
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:not(:disabled):hover { background: var(--border); color: var(--text); }
-
-    .btn-copy {
-      background: var(--orange);
-      color: #fff;
-      font-size: 14px;
-      padding: 11px 20px;
-      width: 100%;
-      margin-top: 12px;
-      letter-spacing: .01em;
-    }
-    .btn-copy:not(:disabled):hover { background: var(--orange-hv); }
-
-    /* ── Status row ── */
+    .stream-row input { flex: 1; min-width: 180px; }
     .status-row {
       display: flex;
       align-items: center;
@@ -264,38 +223,105 @@
       transition: background .3s;
     }
     .dot.connecting { background: var(--warn-fg); }
-    .dot.live       { background: var(--orange);  }
-    .dot.entry      { background: var(--green);   }
+    .dot.live       { background: var(--orange); }
+    .dot.entry      { background: var(--green); }
     #status-text    { font-size: 12.5px; color: var(--muted); }
 
-    /* ── Superchat backup import ── */
-    .import-area {
-      width: 100%;
+    /* ── Buttons ── */
+    button {
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 700;
+      border: none;
+      border-radius: 7px;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: .35; cursor: default; }
+    .btn-primary { background: var(--orange); color: #fff; }
+    .btn-primary:not(:disabled):hover { background: var(--orange-hv); }
+    .btn-ghost {
       background: var(--surface2);
-      color: var(--text);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:not(:disabled):hover { background: var(--border); color: var(--text); }
+    .btn-copy {
+      background: var(--orange);
+      color: #fff;
+      font-size: 14px;
+      padding: 11px 20px;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-copy:not(:disabled):hover { background: var(--orange-hv); }
+
+    /* ── Live feed ── */
+    .feed {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .feed-item {
+      background: var(--surface2);
+      border-left: 3px solid var(--orange);
+      border-radius: 0 6px 6px 0;
+      padding: 7px 12px;
+      font-size: 13px;
+      animation: slideIn .2s ease;
+    }
+    .feed-item.venmo  { border-left-color: var(--purple); }
+    .feed-item.import { border-left-color: var(--muted); }
+    .feed-name { font-weight: 700; color: var(--text); }
+    .feed-meta { color: var(--muted); margin-left: 6px; font-size: 12px; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .feed-empty { font-size: 12.5px; color: var(--muted); padding: 4px 0; opacity: .7; }
+
+    /* ── Wheel entries ── */
+    .entries-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .entries-count { font-size: 15px; font-weight: 700; }
+    .entries-rules { font-size: 11.5px; color: var(--muted); opacity: .75; }
+    .names-box {
+      background: var(--surface2);
       border: 1.5px solid var(--border);
       border-radius: 7px;
-      padding: 10px 12px;
+      padding: 11px 14px;
+      min-height: 160px;
+      max-height: 300px;
+      overflow-y: auto;
       font-family: "Menlo", "Consolas", monospace;
+      font-size: 13.5px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+    }
+    .names-box:empty::before {
+      content: "Names appear here as contributions come in…";
+      color: var(--border);
+      font-family: inherit;
+    }
+    .copy-confirm {
+      text-align: center;
       font-size: 12.5px;
-      line-height: 1.7;
-      resize: vertical;
-      outline: none;
-      min-height: 90px;
-      transition: border-color .15s;
+      color: var(--green);
+      font-weight: 600;
+      height: 18px;
+      margin-top: 6px;
     }
-    .import-area:focus { border-color: var(--orange); }
-    .import-area::placeholder { color: var(--muted); opacity: .5; font-family: inherit; }
-    .import-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .import-hint { font-size: 11.5px; color: var(--muted); opacity: .7; }
 
-    /* ── Venmo section ── */
+    /* ── Settings tab ── */
     .venmo-auto-row {
       display: flex;
       align-items: center;
@@ -311,96 +337,26 @@
       background: var(--green);
       flex-shrink: 0;
     }
-    .manual-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .manual-row { display: flex; gap: 8px; align-items: center; }
     .manual-row input { flex: 1; }
-    .venmo-note {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 10px;
-      line-height: 1.5;
-    }
+    .venmo-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 
-    /* ── Live feed ── */
-    .feed {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .feed-item {
-      background: var(--surface2);
-      border-left: 3px solid var(--orange);
-      border-radius: 0 6px 6px 0;
-      padding: 7px 12px;
-      font-size: 13px;
-      animation: slideIn .2s ease;
-    }
-    .feed-item.venmo { border-left-color: var(--purple); }
-    .feed-item .feed-name  { font-weight: 700; color: var(--text); }
-    .feed-item .feed-meta  { color: var(--muted); margin-left: 6px; font-size: 12px; }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .feed-empty {
-      font-size: 12.5px;
-      color: var(--muted);
-      padding: 6px 0;
-      opacity: .7;
-    }
-
-    /* ── Entries ── */
-    .entries-header {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-    .entries-count {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .entries-rules {
-      font-size: 11.5px;
-      color: var(--muted);
-      opacity: .75;
-    }
-    .names-box {
-      background: var(--surface2);
-      border: 1.5px solid var(--border);
-      border-radius: 7px;
-      padding: 11px 14px;
-      min-height: 160px;
-      max-height: 300px;
-      overflow-y: auto;
+    .import-area {
+      min-height: 90px;
+      resize: vertical;
       font-family: "Menlo", "Consolas", monospace;
-      font-size: 13.5px;
-      line-height: 1.75;
-      white-space: pre-wrap;
-      color: var(--text);
-    }
-    .names-box:empty::before {
-      content: "Names appear here as contributions come in…";
-      color: var(--border);
-      font-family: inherit;
-    }
-
-    /* ── Copy confirm ── */
-    .copy-confirm {
-      text-align: center;
       font-size: 12.5px;
-      color: var(--green);
-      font-weight: 600;
-      height: 18px;
-      margin-top: 6px;
+      line-height: 1.7;
     }
+    .import-area::placeholder { color: var(--muted); opacity: .5; font-family: inherit; }
+    .import-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .import-hint { font-size: 11.5px; color: var(--muted); opacity: .7; }
 
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 5px; }
@@ -410,44 +366,32 @@
 </head>
 <body>
 
-<!-- Header -->
-<header class="header">
-  <img id="logo-img" class="header-logo" src="logo.png" alt=""
-       onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';" />
-  <div id="logo-fallback" class="header-logo-placeholder" style="display:none">H</div>
-  <div class="header-title"><em>Hack &amp; Mack</em> &nbsp;Wheel Tracker</div>
-  <div class="header-badge">LIVE TOOL</div>
-</header>
+<div class="chrome">
+  <header class="header">
+    <img id="logo-img" class="header-logo" src="logo.png" alt=""
+         onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'" />
+    <div id="logo-fallback" class="header-logo-placeholder" style="display:none">H</div>
+    <div class="header-title"><em>Hack &amp; Mack</em> &nbsp;Wheel Tracker</div>
+  </header>
 
-<!-- Notice -->
-<div class="notice">
-  <span class="notice-icon">⚡</span>
-  Start tracking as soon as your stream goes live — before the wheel segment begins. Contributions before you click Start won't be captured.
+  <nav class="tab-bar">
+    <div class="tab active" id="tab-tracker" onclick="switchTab('tracker')">Tracker</div>
+    <div class="tab" id="tab-settings" onclick="switchTab('settings')">
+      Settings
+      <span class="tab-badge" id="settings-badge" style="display:none">!</span>
+    </div>
+  </nav>
 </div>
 
-<main class="main">
+<!-- Notice (sits outside panels so it stays full-width) -->
+<div class="notice" id="notice">
+  <span>⚡</span>
+  Start tracking as soon as your stream goes live — before the wheel segment begins.
+</div>
 
-  <!-- Settings (collapsible) -->
-  <div class="section-row clickable" id="settings-toggle" onclick="toggleSettings()">
-    <span class="section-tag">Settings</span>
-    <div class="section-line"></div>
-    <span class="section-chevron" id="settings-chevron">▼</span>
-  </div>
-  <div class="collapsible" id="settings-panel">
-    <div class="card">
-      <div class="field-row">
-        <label class="field-label" for="server-url">Server URL</label>
-        <input type="text" id="server-url" placeholder="https://wheel-tracker.fly.dev" autocomplete="off" />
-      </div>
-      <div class="field-row">
-        <span></span>
-        <span class="field-hint">Saved in your browser — never shared.</span>
-      </div>
-    </div>
-  </div>
+<!-- ── Tracker tab ── -->
+<div class="tab-panel" id="panel-tracker">
 
-  <!-- Stream -->
-  <div class="section-row"><span class="section-tag">Stream</span><div class="section-line"></div></div>
   <div class="card">
     <div class="stream-row">
       <input type="text" id="video-url" placeholder="YouTube stream URL or video ID" />
@@ -456,65 +400,16 @@
     </div>
     <div class="status-row">
       <div class="dot" id="dot"></div>
-      <span id="status-text">Ready — enter your Server URL in Settings, then paste your stream link</span>
+      <span id="status-text">Ready — paste your stream link and press Start</span>
     </div>
   </div>
 
-  <!-- Venmo (collapsible) -->
-  <div class="section-row clickable" id="venmo-toggle" onclick="toggleVenmo()">
-    <span class="section-tag">Venmo</span>
-    <div class="section-line"></div>
-    <span class="section-chevron" id="venmo-chevron">▼</span>
-  </div>
-  <div class="collapsible" id="venmo-panel">
-    <div class="card">
-      <div class="venmo-auto-row" id="venmo-auto-status" style="display:none">
-        <div class="venmo-auto-dot"></div>
-        Auto-tracking payments via server
-      </div>
-      <div class="manual-row">
-        <input type="text" id="manual-name" placeholder="Contributor name" />
-        <input type="text" id="manual-amount" placeholder="Amount" style="max-width:110px" />
-        <button class="btn-ghost" onclick="addManual()">+ Add</button>
-      </div>
-      <p class="venmo-note" id="venmo-note">
-        Set your Server URL above to auto-track Venmo payments, or add them manually here.
-      </p>
-    </div>
-  </div>
-
-  <!-- Superchat Backup (collapsible) -->
-  <div class="section-row clickable" id="backup-toggle" onclick="toggleBackup()">
-    <span class="section-tag">Manual Backup</span>
-    <div class="section-line"></div>
-    <span class="section-chevron" id="backup-chevron">▼</span>
-  </div>
-  <div class="collapsible" id="backup-panel">
-    <div class="card">
-      <!-- Single entry (name + amount) -->
-      <div class="manual-row" style="margin-bottom:14px">
-        <input type="text" id="sc-name" placeholder="Contributor name" />
-        <input type="text" id="sc-amount" placeholder="Amount" style="max-width:110px" />
-        <button class="btn-ghost" onclick="addSCManual()">+ Add</button>
-      </div>
-      <!-- Paste previous session list -->
-      <textarea class="import-area" id="import-textarea"
-        placeholder="@Name → YouTube SC&#10;Name → Venmo&#10;One per line…"></textarea>
-      <div class="import-footer">
-        <span class="import-hint">@Name = YouTube SC &nbsp;·&nbsp; Name = Venmo</span>
-        <button class="btn-ghost" onclick="importNames()">Import List</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Live Feed -->
   <div class="section-row"><span class="section-tag">Live Feed</span><div class="section-line"></div></div>
   <div class="card">
     <ul class="feed" id="feed"></ul>
     <div class="feed-empty" id="feed-empty">Contributions will appear here in real time…</div>
   </div>
 
-  <!-- Wheel Entries -->
   <div class="section-row"><span class="section-tag">Wheel Entries</span><div class="section-line"></div></div>
   <div class="card">
     <div class="entries-header">
@@ -528,7 +423,55 @@
     <div class="copy-confirm" id="copy-confirm"></div>
   </div>
 
-</main>
+</div><!-- /panel-tracker -->
+
+<!-- ── Settings tab ── -->
+<div class="tab-panel hidden" id="panel-settings">
+
+  <div class="section-row"><span class="section-tag">Server</span><div class="section-line"></div></div>
+  <div class="card">
+    <div class="field-row">
+      <label class="field-label" for="server-url">Server URL</label>
+      <input type="text" id="server-url" placeholder="https://wheel-tracker.fly.dev" autocomplete="off" />
+    </div>
+    <div class="field-row">
+      <span></span>
+      <span class="field-hint">Saved in your browser — never shared.</span>
+    </div>
+  </div>
+
+  <div class="section-row"><span class="section-tag">Venmo</span><div class="section-line"></div></div>
+  <div class="card">
+    <div class="venmo-auto-row" id="venmo-auto-status" style="display:none">
+      <div class="venmo-auto-dot"></div>
+      Auto-tracking payments via server
+    </div>
+    <div class="manual-row">
+      <input type="text" id="manual-name" placeholder="Contributor name" />
+      <input type="text" id="manual-amount" placeholder="Amount" style="max-width:110px" />
+      <button class="btn-ghost" onclick="addManual()">+ Add</button>
+    </div>
+    <p class="venmo-note" id="venmo-note">
+      Set your Server URL above to auto-track Venmo payments, or add them manually here.
+    </p>
+  </div>
+
+  <div class="section-row"><span class="section-tag">Manual Backup</span><div class="section-line"></div></div>
+  <div class="card">
+    <div class="manual-row" style="margin-bottom:14px">
+      <input type="text" id="sc-name" placeholder="Contributor name" />
+      <input type="text" id="sc-amount" placeholder="Amount" style="max-width:110px" />
+      <button class="btn-ghost" onclick="addSCManual()">+ Add SC</button>
+    </div>
+    <textarea class="import-area" id="import-textarea"
+      placeholder="@Name → YouTube SC&#10;Name → Venmo&#10;One per line…"></textarea>
+    <div class="import-footer">
+      <span class="import-hint">@Name = YouTube SC &nbsp;·&nbsp; Name = Venmo</span>
+      <button class="btn-ghost" onclick="importNames()">Import List</button>
+    </div>
+  </div>
+
+</div><!-- /panel-settings -->
 
 <script>
   // ── Config ──────────────────────────────────────────────────────────────────
@@ -537,48 +480,38 @@
   const VENMO_POLL_MS = 20_000;
 
   // ── State ────────────────────────────────────────────────────────────────────
-  let entries        = [];
-  let polling        = false;
-  let pageToken      = null;
-  let liveChatId     = null;
-  let videoId        = null;
-  let pollTimeout    = null;
-  let venmoInterval  = null;
-  let venmoSince     = 0;
-  let venmoSeenIds   = new Set();
+  let entries       = [];
+  let polling       = false;
+  let pageToken     = null;
+  let liveChatId    = null;
+  let videoId       = null;
+  let pollTimeout   = null;
+  let venmoInterval = null;
+  let venmoSince    = 0;
+  let venmoSeenIds  = new Set();
 
-  // ── Settings persistence & collapsible ───────────────────────────────────────
+  // ── Settings persistence ──────────────────────────────────────────────────────
   const serverUrlInput = document.getElementById("server-url");
   serverUrlInput.value = localStorage.getItem("hm_server_url") || "";
-  serverUrlInput.addEventListener("input", () =>
-    localStorage.setItem("hm_server_url", serverUrlInput.value.trim()));
+  serverUrlInput.addEventListener("input", () => {
+    const val = serverUrlInput.value.trim();
+    localStorage.setItem("hm_server_url", val);
+    document.getElementById("settings-badge").style.display = val ? "none" : "";
+  });
 
-  // ── Collapsible panels ───────────────────────────────────────────────────────
-  const hasServerUrl = !!localStorage.getItem("hm_server_url");
-  const settingsPanel   = document.getElementById("settings-panel");
-  const settingsChevron = document.getElementById("settings-chevron");
-  const venmoPanel      = document.getElementById("venmo-panel");
-  const venmoChevron    = document.getElementById("venmo-chevron");
-  const backupPanel     = document.getElementById("backup-panel");
-  const backupChevron   = document.getElementById("backup-chevron");
-
-  function toggleSettings() {
-    const open = settingsPanel.classList.toggle("open");
-    settingsChevron.classList.toggle("open", open);
-  }
-  function toggleVenmo() {
-    const open = venmoPanel.classList.toggle("open");
-    venmoChevron.classList.toggle("open", open);
-  }
-  function toggleBackup() {
-    const open = backupPanel.classList.toggle("open");
-    backupChevron.classList.toggle("open", open);
+  // Show badge + open Settings if server URL not yet configured
+  if (!localStorage.getItem("hm_server_url")) {
+    document.getElementById("settings-badge").style.display = "";
+    switchTab("settings");
   }
 
-  // Settings: open if no URL saved; Venmo + Backup: start collapsed
-  if (!hasServerUrl) {
-    settingsPanel.classList.add("open");
-    settingsChevron.classList.add("open");
+  // ── Tab switching ─────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    const isTracker = name === "tracker";
+    document.getElementById("tab-tracker").classList.toggle("active", isTracker);
+    document.getElementById("tab-settings").classList.toggle("active", !isTracker);
+    document.getElementById("panel-tracker").classList.toggle("hidden", !isTracker);
+    document.getElementById("panel-settings").classList.toggle("hidden", isTracker);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -593,22 +526,26 @@
   }
 
   function setStatus(text, dotClass = "") {
-    const dot = document.getElementById("dot");
-    dot.className = "dot " + dotClass;
+    document.getElementById("dot").className = "dot " + dotClass;
     document.getElementById("status-text").textContent = text;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   function addFeedItem(name, amountStr, countStr, source) {
     const feed  = document.getElementById("feed");
-    const empty = document.getElementById("feed-empty");
-    empty.style.display = "none";
+    document.getElementById("feed-empty").style.display = "none";
 
     const li = document.createElement("li");
-    li.className = "feed-item" + (source === "Venmo" ? " venmo" : "");
-    li.innerHTML = `<span class="feed-name">${escHtml(name)}</span>` +
-      `<span class="feed-meta">${escHtml(amountStr)} · ${escHtml(countStr)} · ${escHtml(source)}</span>`;
-    feed.prepend(li);
+    const cls = source === "Venmo" ? " venmo" : source === "Import" ? " import" : "";
+    li.className = "feed-item" + cls;
 
+    const meta = [amountStr, countStr, source].filter(s => s).join(" · ");
+    li.innerHTML = `<span class="feed-name">${escHtml(name)}</span>` +
+                   `<span class="feed-meta">${escHtml(meta)}</span>`;
+    feed.prepend(li);
     while (feed.children.length > 20) feed.removeChild(feed.lastChild);
   }
 
@@ -616,15 +553,13 @@
     const n = entriesForAmount(amount);
     if (n === 0) return;
     for (let i = 0; i < n; i++) entries.push(name);
-    const countStr = `${n} ${n === 1 ? "entry" : "entries"}`;
-    addFeedItem(name, `$${amount.toFixed(2)}`, countStr, source);
+    addFeedItem(name, `$${amount.toFixed(2)}`, `${n} ${n === 1 ? "entry" : "entries"}`, source);
     refreshNamesBox();
     flashDot();
   }
 
   function refreshNamesBox() {
-    const box = document.getElementById("names-box");
-    box.textContent = entries.join("\n");
+    document.getElementById("names-box").textContent = entries.join("\n");
     const count = entries.length;
     document.getElementById("entries-count").textContent =
       `${count} ${count === 1 ? "entry" : "entries"}`;
@@ -632,18 +567,11 @@
   }
 
   function flashDot() {
-    setStatus(
-      `${entries.length} ${entries.length === 1 ? "entry" : "entries"} collected`,
-      "entry"
-    );
+    setStatus(`${entries.length} ${entries.length === 1 ? "entry" : "entries"} collected`, "entry");
     setTimeout(() => { if (polling) setStatus("Tracking live…", "live"); }, 2000);
   }
 
-  function escHtml(str) {
-    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  }
-
-  // ── YouTube (via server) ──────────────────────────────────────────────────────
+  // ── YouTube polling (via server) ──────────────────────────────────────────────
   async function pollSuperchats(serverUrl) {
     if (!polling) return;
 
@@ -656,48 +584,33 @@
     }
 
     try {
-      const res  = await fetch(url);
-      const data = await res.json();
-
+      const data = await fetch(url).then(r => r.json());
       if (data.error) {
         setStatus(`Error: ${data.error}`, "");
         pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 15000);
         return;
       }
-
       liveChatId = data.live_chat_id;
       pageToken  = data.next_page_token || null;
-
-      for (const entry of data.entries || []) {
-        addEntries(entry.name, entry.amount, "YouTube SC");
-      }
-
-      const waitMs = Math.max(data.polling_interval_ms || 10000, 8000);
-      pollTimeout = setTimeout(() => pollSuperchats(serverUrl), waitMs);
-
+      for (const e of data.entries || []) addEntries(e.name, e.amount, "YouTube SC");
+      pollTimeout = setTimeout(() => pollSuperchats(serverUrl),
+        Math.max(data.polling_interval_ms || 10000, 8000));
     } catch (err) {
       setStatus(`Poll error: ${err.message}`, "");
       pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 15000);
     }
   }
 
-  // ── Venmo server polling ──────────────────────────────────────────────────────
+  // ── Venmo polling (via server) ────────────────────────────────────────────────
   async function pollVenmo(serverUrl) {
     if (!polling) return;
     try {
-      const url  = `${serverUrl}/api/venmo?since=${venmoSince}`;
-      const res  = await fetch(url);
-      const data = await res.json();
-
-      if (data.error) {
-        console.warn("Venmo server error:", data.error);
-        return;
-      }
-
-      for (const entry of data.entries || []) {
-        if (venmoSeenIds.has(entry.id)) continue;
-        venmoSeenIds.add(entry.id);
-        addEntries(entry.name, entry.amount, "Venmo");
+      const data = await fetch(`${serverUrl}/api/venmo?since=${venmoSince}`).then(r => r.json());
+      if (data.error) { console.warn("Venmo:", data.error); return; }
+      for (const e of data.entries || []) {
+        if (venmoSeenIds.has(e.id)) continue;
+        venmoSeenIds.add(e.id);
+        addEntries(e.name, e.amount, "Venmo");
       }
     } catch (err) {
       console.warn("Venmo poll failed:", err.message);
@@ -707,14 +620,20 @@
   // ── Controls ──────────────────────────────────────────────────────────────────
   async function startTracking() {
     const rawUrl    = document.getElementById("video-url").value.trim();
-    const serverUrl = document.getElementById("server-url").value.trim().replace(/\/$/, "");
+    const serverUrl = serverUrlInput.value.trim().replace(/\/$/, "");
 
-    if (!serverUrl) { alert("Please enter your Server URL in Settings."); return; }
-    if (!rawUrl)    { alert("Please paste your YouTube stream URL or video ID."); return; }
+    if (!serverUrl) {
+      switchTab("settings");
+      serverUrlInput.focus();
+      alert("Please enter your Server URL in Settings first.");
+      return;
+    }
+    if (!rawUrl) { alert("Please paste your YouTube stream URL or video ID."); return; }
 
     document.getElementById("start-btn").disabled = true;
     document.getElementById("stop-btn").disabled  = false;
     document.getElementById("video-url").disabled = true;
+    document.getElementById("notice").classList.add("hidden");
 
     entries      = [];
     pageToken    = null;
@@ -726,95 +645,77 @@
     document.getElementById("feed").innerHTML = "";
     document.getElementById("feed-empty").style.display = "";
 
-    // Collapse settings when tracking starts
-    settingsPanel.classList.remove("open");
-    settingsChevron.classList.remove("open");
-
+    switchTab("tracker");
     setStatus("Connecting…", "connecting");
     polling = true;
 
     pollSuperchats(serverUrl);
-
     document.getElementById("venmo-auto-status").style.display = "flex";
     document.getElementById("venmo-note").textContent =
       "Auto-tracking Venmo payments via server. Add manually below if needed.";
     pollVenmo(serverUrl);
     venmoInterval = setInterval(() => pollVenmo(serverUrl), VENMO_POLL_MS);
-
     setStatus("Tracking live…", "live");
   }
 
   function stopTracking() {
     polling = false;
-    if (pollTimeout)   clearTimeout(pollTimeout);
-    if (venmoInterval) clearInterval(venmoInterval);
+    clearTimeout(pollTimeout);
+    clearInterval(venmoInterval);
     venmoInterval = null;
     document.getElementById("start-btn").disabled = false;
     document.getElementById("stop-btn").disabled  = true;
     document.getElementById("video-url").disabled = false;
     document.getElementById("venmo-auto-status").style.display = "none";
+    document.getElementById("notice").classList.remove("hidden");
     setStatus("Stopped.", "");
   }
 
-  // ── Manual add ────────────────────────────────────────────────────────────────
+  // ── Manual adds ───────────────────────────────────────────────────────────────
   function addManual() {
-    const nameInput   = document.getElementById("manual-name");
-    const amountInput = document.getElementById("manual-amount");
-    const name   = nameInput.value.trim();
-    const amount = parseFloat(amountInput.value.replace(/[$,]/g, "").trim());
-
-    if (!name)        { alert("Please enter a name."); return; }
+    const n = document.getElementById("manual-name");
+    const a = document.getElementById("manual-amount");
+    const name   = n.value.trim();
+    const amount = parseFloat(a.value.replace(/[$,]/g, ""));
+    if (!name)              { alert("Please enter a name."); return; }
     if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
-
     addEntries(name, amount, "Venmo");
-    nameInput.value   = "";
-    amountInput.value = "";
-    nameInput.focus();
+    n.value = ""; a.value = ""; n.focus();
   }
 
-  document.getElementById("manual-amount").addEventListener("keydown", e => {
-    if (e.key === "Enter") addManual();
-  });
-  document.getElementById("manual-name").addEventListener("keydown", e => {
-    if (e.key === "Enter") document.getElementById("manual-amount").focus();
-  });
-
-  // ── Superchat manual add ──────────────────────────────────────────────────────
   function addSCManual() {
-    const nameInput   = document.getElementById("sc-name");
-    const amountInput = document.getElementById("sc-amount");
-    const name   = nameInput.value.trim();
-    const amount = parseFloat(amountInput.value.replace(/[$,]/g, "").trim());
-
-    if (!name)        { alert("Please enter a name."); return; }
+    const n = document.getElementById("sc-name");
+    const a = document.getElementById("sc-amount");
+    const name   = n.value.trim();
+    const amount = parseFloat(a.value.replace(/[$,]/g, ""));
+    if (!name)              { alert("Please enter a name."); return; }
     if (isNaN(amount) || amount <= 0) { alert("Please enter a valid amount."); return; }
-
     addEntries(name, amount, "YouTube SC");
-    nameInput.value   = "";
-    amountInput.value = "";
-    nameInput.focus();
+    n.value = ""; a.value = ""; n.focus();
   }
 
-  document.getElementById("sc-amount").addEventListener("keydown", e => {
-    if (e.key === "Enter") addSCManual();
-  });
-  document.getElementById("sc-name").addEventListener("keydown", e => {
-    if (e.key === "Enter") document.getElementById("sc-amount").focus();
-  });
+  // Enter-key shortcuts
+  document.getElementById("manual-name").addEventListener("keydown",
+    e => e.key === "Enter" && document.getElementById("manual-amount").focus());
+  document.getElementById("manual-amount").addEventListener("keydown",
+    e => e.key === "Enter" && addManual());
+  document.getElementById("sc-name").addEventListener("keydown",
+    e => e.key === "Enter" && document.getElementById("sc-amount").focus());
+  document.getElementById("sc-amount").addEventListener("keydown",
+    e => e.key === "Enter" && addSCManual());
 
-  // ── Import previous session list ──────────────────────────────────────────────
+  // ── Import list ───────────────────────────────────────────────────────────────
   function importNames() {
     const ta    = document.getElementById("import-textarea");
-    const lines = ta.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length === 0) { alert("Nothing to import — paste a name list first."); return; }
-
+    const lines = ta.value.split("\n").map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { alert("Nothing to import — paste a name list first."); return; }
     for (const line of lines) {
       const isSC   = line.startsWith("@");
       const name   = isSC ? line.slice(1).trim() : line;
       const source = isSC ? "YouTube SC" : "Venmo";
       if (!name) continue;
       entries.push(name);
-      addFeedItem(name, "manual", "1 entry", source);
+      addFeedItem(name, "", "1 entry", source);
     }
     refreshNamesBox();
     flashDot();
