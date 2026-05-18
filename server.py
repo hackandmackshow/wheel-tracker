@@ -16,10 +16,15 @@ import re
 import imaplib
 import email as email_lib
 import email.utils
+import socket
+import time
+import threading
 from datetime import datetime, timedelta, timezone
+import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 app = Flask(__name__)
 CORS(app, origins=os.environ.get("CORS_ORIGIN", "*"))
@@ -40,6 +45,11 @@ VENMO_NAME_PATS = [
 # Build YouTube client once at startup rather than on every request
 _yt = build("youtube", "v3", developerKey=YOUTUBE_API_KEY, cache_discovery=False) \
       if YOUTUBE_API_KEY else None
+
+# Venmo result cache — avoids opening a new IMAP connection on every poll
+_venmo_cache = {"entries": [], "error": None, "fetched_at": 0}
+_venmo_cache_lock = threading.Lock()
+VENMO_CACHE_TTL = 15  # seconds
 
 
 def parse_venmo_subject(subject: str):
@@ -129,45 +139,39 @@ def superchats():
             "error":               None,
         })
 
+    except HttpError as e:
+        logging.exception("YouTube API error")
+        if e.resp.status == 403 and "rateLimitExceeded" in str(e):
+            return jsonify({"entries": [], "error":
+                "YouTube rate limit hit — another tab or user may be polling the same stream. "
+                "Close duplicate tabs and try again in a minute.",
+                "rate_limited": True})
+        return jsonify({"entries": [], "error": f"YouTube API error ({e.resp.status}). Try again shortly."})
     except Exception as e:
-        return jsonify({"entries": [], "error": str(e)})
+        logging.exception("Superchat poll error")
+        return jsonify({"entries": [], "error": "Unexpected error polling superchats. Check server logs."})
 
 
-@app.route("/api/venmo")
-def venmo():
-    """
-    Returns Venmo payment entries received after the given Unix timestamp.
-    Only searches the last 7 days of email to keep memory usage low.
-
-    Query params:
-      since (float) — Unix timestamp. Only emails after this time are returned.
-    """
-    since_ts = request.args.get("since", type=float, default=0.0)
-
-    if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
-        return jsonify({"entries": [], "error": "Email not configured on server."})
-
+def _fetch_venmo_emails():
+    """Fetch all Venmo emails from the last 7 days via IMAP and update the cache."""
     entries = []
     error   = None
     mail    = None
 
     try:
-        # timeout=10 applies to all socket operations on this connection
         mail = imaplib.IMAP4_SSL("imap.gmail.com", timeout=10)
         mail.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         mail.select("INBOX")
 
-        # Limit search to last 7 days — a stream won't span longer than that
         since_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%d-%b-%Y")
         _, data = mail.search(None, "FROM", f'"{VENMO_FROM}"', "SINCE", since_date)
         uids = data[0].split() if data and data[0] else []
 
         if uids:
-            # Single FETCH for all UIDs — one round-trip instead of N
             uid_set = b",".join(uids)
             _, all_msg_data = mail.fetch(uid_set, "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT MESSAGE-ID)])")
 
-            for i, item in enumerate(all_msg_data):
+            for item in all_msg_data:
                 if not isinstance(item, tuple):
                     continue
                 msg = email_lib.message_from_bytes(item[1])
@@ -176,9 +180,6 @@ def venmo():
                 try:
                     email_ts = email.utils.parsedate_to_datetime(date_str).timestamp()
                 except Exception:
-                    continue
-
-                if email_ts < since_ts:
                     continue
 
                 subject = msg.get("Subject", "")
@@ -194,19 +195,56 @@ def venmo():
                     })
 
     except imaplib.IMAP4.error as e:
-        error = f"Email login failed: {e}. Check EMAIL_ADDRESS and EMAIL_APP_PASSWORD."
+        logging.exception("IMAP error")
+        error = "Email login failed. Check EMAIL_ADDRESS and EMAIL_APP_PASSWORD."
     except (TimeoutError, socket.timeout):
         error = "Gmail connection timed out. Try again."
     except Exception as e:
-        error = str(e)
+        logging.exception("Venmo IMAP error")
+        error = "Unexpected error checking Venmo emails. Check server logs."
     finally:
         if mail:
             try:
-                mail.shutdown()  # close socket directly — avoids hanging on LOGOUT
+                mail.shutdown()
             except Exception:
                 pass
 
-    return jsonify({"entries": entries, "error": error})
+    with _venmo_cache_lock:
+        if error:
+            _venmo_cache["error"] = error
+        else:
+            _venmo_cache["entries"] = entries
+            _venmo_cache["error"]   = None
+        _venmo_cache["fetched_at"] = time.monotonic()
+
+
+@app.route("/api/venmo")
+def venmo():
+    """
+    Returns Venmo payment entries received after the given Unix timestamp.
+    Results are cached for 15s to avoid opening an IMAP connection on every poll.
+
+    Query params:
+      since (float) — Unix timestamp. Only emails after this time are returned.
+    """
+    since_ts = request.args.get("since", type=float, default=0.0)
+
+    if not EMAIL_ADDRESS or not EMAIL_PASSWORD:
+        return jsonify({"entries": [], "error": "Email not configured on server."})
+
+    with _venmo_cache_lock:
+        age = time.monotonic() - _venmo_cache["fetched_at"]
+        needs_refresh = age > VENMO_CACHE_TTL
+
+    if needs_refresh:
+        _fetch_venmo_emails()
+
+    with _venmo_cache_lock:
+        all_entries = list(_venmo_cache["entries"])
+        error = _venmo_cache["error"]
+
+    filtered = [e for e in all_entries if e["ts"] >= since_ts]
+    return jsonify({"entries": filtered, "error": error})
 
 
 if __name__ == "__main__":

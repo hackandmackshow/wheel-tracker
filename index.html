@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hack & Mack — Wheel Entry Tracker</title>
+  <title>Hack & Mack Tools - Wheel Tracker</title>
   <link rel="icon" type="image/png" href="logo.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,6 +20,7 @@
       --green:     #4caf7d;
       --warn-bg:   #1e1a0e;
       --warn-fg:   #d4a23a;
+      --red:       #e05252;
       --purple:    #7c4dff;
     }
 
@@ -47,7 +48,7 @@
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       padding: 0 24px;
-      height: 58px;
+      height: 70px;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -57,7 +58,7 @@
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 3px;
-      background: var(--orange);
+      background: linear-gradient(90deg, var(--orange), var(--orange-hv), var(--orange));
     }
     .header-logo {
       width: 32px; height: 32px;
@@ -74,12 +75,24 @@
       flex-shrink: 0;
     }
     .header-title {
-      font-size: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      line-height: 1.2;
+    }
+    .header-brand {
+      font-size: 20px;
       font-weight: 800;
       color: var(--text);
       letter-spacing: -.01em;
     }
-    .header-title em { color: var(--orange); font-style: normal; }
+    .header-brand em { color: var(--orange); font-style: normal; }
+    .header-tool {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .04em;
+    }
 
     /* ── Tab bar ── */
     .tab-bar {
@@ -166,7 +179,9 @@
       border-radius: 10px;
       border: 1px solid var(--border);
       padding: 18px 20px;
+      transition: border-color .2s;
     }
+    .card:hover { border-color: #3a3f4d; }
 
     /* ── Form fields ── */
     .field-row {
@@ -225,7 +240,19 @@
     .dot.connecting { background: var(--warn-fg); }
     .dot.live       { background: var(--orange); }
     .dot.entry      { background: var(--green); }
+    .dot.error      { background: var(--red); }
     #status-text    { font-size: 12.5px; color: var(--muted); }
+    .source-status  {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; color: var(--muted); cursor: default;
+    }
+    .source-status .dot { width: 7px; height: 7px; }
+    .source-statuses { display: none; gap: 14px; margin-left: 4px; }
+    .poll-hint {
+      font-size: 11px; color: var(--muted); opacity: 0.55;
+      margin-top: 2px;
+      display: none;
+    }
 
     /* ── Buttons ── */
     button {
@@ -271,10 +298,12 @@
       background: var(--surface2);
       border-left: 3px solid var(--orange);
       border-radius: 0 6px 6px 0;
-      padding: 7px 12px;
+      padding: 8px 12px;
       font-size: 13px;
-      animation: slideIn .2s ease;
+      animation: slideIn .25s ease;
+      transition: background .15s;
     }
+    .feed-item:hover { background: var(--border); }
     .feed-item.venmo  { border-left-color: var(--purple); }
     .feed-item.import { border-left-color: var(--muted); }
     .feed-name { font-weight: 700; color: var(--text); }
@@ -368,10 +397,13 @@
 
 <div class="chrome">
   <header class="header">
-    <img id="logo-img" class="header-logo" src="logo.png" alt=""
-         onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'" />
-    <div id="logo-fallback" class="header-logo-placeholder" style="display:none">H</div>
-    <div class="header-title"><em>Hack &amp; Mack</em> &nbsp;Wheel Tracker</div>
+    <!-- <img id="logo-img" class="header-logo" src="logo.png" alt=""
+         onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'" /> -->
+    <div id="logo" class="header-logo-placeholder" style="display:none">H &amp; M</div>
+    <div class="header-title">
+      <span class="header-brand"><em>Hack &amp; Mack Tools</em></span>
+      <span class="header-tool">Wheel Tracker</span>
+    </div>
   </header>
 
   <nav class="tab-bar">
@@ -401,7 +433,12 @@
     <div class="status-row">
       <div class="dot" id="dot"></div>
       <span id="status-text">Ready — paste your stream link and press Start</span>
+      <span class="source-statuses" id="source-statuses">
+        <span class="source-status" id="yt-status"><span class="dot" id="yt-dot"></span>YouTube</span>
+        <span class="source-status" id="venmo-status"><span class="dot" id="venmo-dot"></span>Venmo</span>
+      </span>
     </div>
+    <div class="poll-hint" id="poll-hint">YouTube polls every ~10s · Venmo polls every ~20s</div>
   </div>
 
   <div class="section-row"><span class="section-tag">Live Feed</span><div class="section-line"></div></div>
@@ -432,7 +469,7 @@
   <div class="card">
     <div class="field-row">
       <label class="field-label" for="server-url">Server URL</label>
-      <input type="text" id="server-url" placeholder="https://wheel-tracker.fly.dev" autocomplete="off" />
+      <input type="text" id="server-url" placeholder="https://your-app.fly.dev" autocomplete="off" />
     </div>
     <div class="field-row">
       <span></span>
@@ -489,6 +526,7 @@
   let venmoInterval = null;
   let venmoSince    = 0;
   let venmoSeenIds  = new Set();
+  let venmoFailures = 0;
 
   // ── Settings persistence ──────────────────────────────────────────────────────
   const serverUrlInput = document.getElementById("server-url");
@@ -528,6 +566,25 @@
   function setStatus(text, dotClass = "") {
     document.getElementById("dot").className = "dot " + dotClass;
     document.getElementById("status-text").textContent = text;
+  }
+
+  function setSourceStatus(source, state, tooltip) {
+    const id = source === "yt" ? "yt-dot" : "venmo-dot";
+    document.getElementById(id).className = "dot " + state;
+    document.getElementById(id).parentElement.title = tooltip || "";
+  }
+
+  const VENMO_FAIL_WARN = 9; // ~3 min at 20s intervals
+  function venmoFailureEscalate() {
+    if (venmoFailures >= VENMO_FAIL_WARN) {
+      setSourceStatus("venmo", "error",
+        `Venmo down for ~${Math.round(venmoFailures * VENMO_POLL_MS / 60000)}min — payments will backfill once resolved`);
+      if (venmoFailures === VENMO_FAIL_WARN) {
+        addFeedItem("Venmo", "", "not responding — check server logs", "Venmo");
+      }
+    } else {
+      setSourceStatus("venmo", "error", "Retrying…");
+    }
   }
 
   function escHtml(str) {
@@ -586,17 +643,23 @@
     try {
       const data = await fetch(url).then(r => r.json());
       if (data.error) {
-        setStatus(`Error: ${data.error}`, "");
-        pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 15000);
+        if (data.rate_limited) {
+          setSourceStatus("yt", "error", "Rate limited — waiting 60s");
+          pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 60000);
+        } else {
+          setSourceStatus("yt", "error", data.error);
+          pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 15000);
+        }
         return;
       }
+      setSourceStatus("yt", "live", "Connected");
       liveChatId = data.live_chat_id;
       pageToken  = data.next_page_token || null;
       for (const e of data.entries || []) addEntries(e.name, e.amount, "YouTube SC");
       pollTimeout = setTimeout(() => pollSuperchats(serverUrl),
         Math.max(data.polling_interval_ms || 10000, 8000));
     } catch (err) {
-      setStatus(`Poll error: ${err.message}`, "");
+      setSourceStatus("yt", "error", err.message);
       pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 15000);
     }
   }
@@ -606,7 +669,14 @@
     if (!polling) return;
     try {
       const data = await fetch(`${serverUrl}/api/venmo?since=${venmoSince}`).then(r => r.json());
-      if (data.error) { console.warn("Venmo:", data.error); return; }
+      if (data.error) {
+        console.warn("Venmo:", data.error);
+        venmoFailures++;
+        venmoFailureEscalate();
+        return;
+      }
+      venmoFailures = 0;
+      setSourceStatus("venmo", "live", "Connected");
       for (const e of data.entries || []) {
         if (venmoSeenIds.has(e.id)) continue;
         venmoSeenIds.add(e.id);
@@ -614,6 +684,8 @@
       }
     } catch (err) {
       console.warn("Venmo poll failed:", err.message);
+      venmoFailures++;
+      venmoFailureEscalate();
     }
   }
 
@@ -640,7 +712,8 @@
     liveChatId   = null;
     videoId      = extractVideoId(rawUrl);
     venmoSince   = Date.now() / 1000;
-    venmoSeenIds = new Set();
+    venmoSeenIds  = new Set();
+    venmoFailures = 0;
     refreshNamesBox();
     document.getElementById("feed").innerHTML = "";
     document.getElementById("feed-empty").style.display = "";
@@ -648,6 +721,11 @@
     switchTab("tracker");
     setStatus("Connecting…", "connecting");
     polling = true;
+
+    document.getElementById("source-statuses").style.display = "flex";
+    document.getElementById("poll-hint").style.display = "block";
+    setSourceStatus("yt", "connecting", "Connecting…");
+    setSourceStatus("venmo", "connecting", "Connecting…");
 
     pollSuperchats(serverUrl);
     document.getElementById("venmo-auto-status").style.display = "flex";
@@ -667,6 +745,8 @@
     document.getElementById("stop-btn").disabled  = true;
     document.getElementById("video-url").disabled = false;
     document.getElementById("venmo-auto-status").style.display = "none";
+    document.getElementById("source-statuses").style.display = "none";
+    document.getElementById("poll-hint").style.display = "none";
     document.getElementById("notice").classList.remove("hidden");
     setStatus("Stopped.", "");
   }
