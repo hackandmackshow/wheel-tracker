@@ -141,11 +141,20 @@ def superchats():
 
     except HttpError as e:
         logging.exception("YouTube API error")
-        if e.resp.status == 403 and "rateLimitExceeded" in str(e):
+        err_str = str(e)
+        if e.resp.status == 403 and "rateLimitExceeded" in err_str:
             return jsonify({"entries": [], "error":
                 "YouTube rate limit hit — another tab or user may be polling the same stream. "
                 "Close duplicate tabs and try again in a minute.",
                 "rate_limited": True})
+        if e.resp.status == 403 and "liveChatEnded" in err_str:
+            return jsonify({"entries": [], "error":
+                "The live stream has ended.",
+                "stream_ended": True})
+        if e.resp.status == 404 and "liveChatNotFound" in err_str:
+            return jsonify({"entries": [], "error":
+                "Live chat no longer available — the stream may have ended.",
+                "stream_ended": True})
         return jsonify({"entries": [], "error": f"YouTube API error ({e.resp.status}). Try again shortly."})
     except Exception as e:
         logging.exception("Superchat poll error")

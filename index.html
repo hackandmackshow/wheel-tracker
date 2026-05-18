@@ -643,6 +643,19 @@
     try {
       const data = await fetch(url).then(r => r.json());
       if (data.error) {
+        if (data.stream_ended) {
+          setSourceStatus("yt", "error", data.error);
+          setStatus("Stream ended — Venmo still tracking", "");
+          addFeedItem("YouTube", "", data.error, "YouTube SC");
+          // stop YT polling but keep Venmo going
+          return;
+        }
+        if (!liveChatId) {
+          setSourceStatus("yt", "error", data.error);
+          setStatus(data.error, "");
+          stopTracking();
+          return;
+        }
         if (data.rate_limited) {
           setSourceStatus("yt", "error", "Rate limited — waiting 60s");
           pollTimeout = setTimeout(() => pollSuperchats(serverUrl), 60000);
