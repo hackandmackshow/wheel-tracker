@@ -162,33 +162,36 @@ def venmo():
         _, data = mail.search(None, "FROM", f'"{VENMO_FROM}"', "SINCE", since_date)
         uids = data[0].split() if data and data[0] else []
 
-        for uid in uids:
-            # Fetch headers only — much faster and lighter than full RFC822
-            _, msg_data = mail.fetch(uid, "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT MESSAGE-ID)])")
-            if not msg_data or not msg_data[0]:
-                continue
-            msg = email_lib.message_from_bytes(msg_data[0][1])
+        if uids:
+            # Single FETCH for all UIDs — one round-trip instead of N
+            uid_set = b",".join(uids)
+            _, all_msg_data = mail.fetch(uid_set, "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT MESSAGE-ID)])")
 
-            date_str = msg.get("Date", "")
-            try:
-                email_ts = email.utils.parsedate_to_datetime(date_str).timestamp()
-            except Exception:
-                continue
+            for i, item in enumerate(all_msg_data):
+                if not isinstance(item, tuple):
+                    continue
+                msg = email_lib.message_from_bytes(item[1])
 
-            if email_ts < since_ts:
-                continue
+                date_str = msg.get("Date", "")
+                try:
+                    email_ts = email.utils.parsedate_to_datetime(date_str).timestamp()
+                except Exception:
+                    continue
 
-            subject = msg.get("Subject", "")
-            msg_id  = msg.get("Message-ID", uid.decode() if isinstance(uid, bytes) else uid)
-            name, amount = parse_venmo_subject(subject)
+                if email_ts < since_ts:
+                    continue
 
-            if name and amount >= 4.99:
-                entries.append({
-                    "id":     msg_id,
-                    "name":   name,
-                    "amount": amount,
-                    "ts":     email_ts,
-                })
+                subject = msg.get("Subject", "")
+                msg_id  = msg.get("Message-ID", "")
+                name, amount = parse_venmo_subject(subject)
+
+                if name and amount >= 4.99:
+                    entries.append({
+                        "id":     msg_id,
+                        "name":   name,
+                        "amount": amount,
+                        "ts":     email_ts,
+                    })
 
     except imaplib.IMAP4.error as e:
         error = f"Email login failed: {e}. Check EMAIL_ADDRESS and EMAIL_APP_PASSWORD."
