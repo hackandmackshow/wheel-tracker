@@ -17,6 +17,7 @@ import imaplib
 import email as email_lib
 import email.utils
 import socket
+from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from googleapiclient.discovery import build
@@ -24,9 +25,9 @@ from googleapiclient.discovery import build
 app = Flask(__name__)
 CORS(app, origins=os.environ.get("CORS_ORIGIN", "*"))
 
-YOUTUBE_API_KEY  = os.environ.get("YOUTUBE_API_KEY", "")
-EMAIL_ADDRESS    = os.environ.get("EMAIL_ADDRESS", "")
-EMAIL_PASSWORD   = os.environ.get("EMAIL_APP_PASSWORD", "")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
+EMAIL_ADDRESS   = os.environ.get("EMAIL_ADDRESS", "")
+EMAIL_PASSWORD  = os.environ.get("EMAIL_APP_PASSWORD", "")
 
 VENMO_FROM      = "venmo@venmo.com"
 VENMO_AMOUNT_RE = re.compile(r'\$(\d+(?:\.\d{1,2})?)')
@@ -36,6 +37,10 @@ VENMO_NAME_PATS = [
     re.compile(r'received .+ from (.+?)[\.\n]',  re.IGNORECASE),
     re.compile(r'^(.+?)\s+completed',            re.IGNORECASE),
 ]
+
+# Build YouTube client once at startup rather than on every request
+_yt = build("youtube", "v3", developerKey=YOUTUBE_API_KEY, cache_discovery=False) \
+      if YOUTUBE_API_KEY else None
 
 
 def parse_venmo_subject(subject: str):
@@ -58,9 +63,9 @@ def parse_venmo_subject(subject: str):
 @app.route("/health")
 def health():
     return jsonify({
-        "status":          "ok",
-        "youtube_ready":   bool(YOUTUBE_API_KEY),
-        "email_ready":     bool(EMAIL_ADDRESS and EMAIL_PASSWORD),
+        "status":        "ok",
+        "youtube_ready": bool(YOUTUBE_API_KEY),
+        "email_ready":   bool(EMAIL_ADDRESS and EMAIL_PASSWORD),
     })
 
 
@@ -74,17 +79,8 @@ def superchats():
 
     Subsequent calls — pass live_chat_id + page_token:
       GET /api/superchats?live_chat_id=xxx&page_token=yyy
-
-    Response:
-      {
-        "live_chat_id":        "...",
-        "entries":             [{"name": "...", "amount": 5.0, "amount_str": "$5.00"}, ...],
-        "next_page_token":     "...",
-        "polling_interval_ms": 10000,
-        "error":               null
-      }
     """
-    if not YOUTUBE_API_KEY:
+    if not _yt:
         return jsonify({"entries": [], "error": "YouTube API key not configured on server."})
 
     video_id     = request.args.get("video_id", "").strip()
@@ -92,13 +88,11 @@ def superchats():
     page_token   = request.args.get("page_token", "").strip() or None
 
     try:
-        yt = build("youtube", "v3", developerKey=YOUTUBE_API_KEY, cache_discovery=False)
-
         # Resolve live chat ID from video ID on first call
         if not live_chat_id:
             if not video_id:
                 return jsonify({"entries": [], "error": "Provide video_id or live_chat_id."})
-            resp  = yt.videos().list(part="liveStreamingDetails", id=video_id).execute()
+            resp  = _yt.videos().list(part="liveStreamingDetails", id=video_id).execute()
             items = resp.get("items", [])
             if not items:
                 return jsonify({"entries": [], "error": f"Video '{video_id}' not found."})
@@ -112,7 +106,7 @@ def superchats():
         if page_token:
             params["pageToken"] = page_token
 
-        resp    = yt.liveChatMessages().list(**params).execute()
+        resp    = _yt.liveChatMessages().list(**params).execute()
         entries = []
 
         for item in resp.get("items", []):
@@ -144,18 +138,10 @@ def superchats():
 def venmo():
     """
     Returns Venmo payment entries received after the given Unix timestamp.
+    Only searches the last 7 days of email to keep memory usage low.
 
     Query params:
       since (float) — Unix timestamp. Only emails after this time are returned.
-
-    Response:
-      {
-        "entries": [
-          { "id": "<Message-ID>", "name": "Jane Doe", "amount": 10.0, "ts": 1234567890.0 },
-          ...
-        ],
-        "error": null   // or an error string
-      }
     """
     since_ts = request.args.get("since", type=float, default=0.0)
 
@@ -172,7 +158,9 @@ def venmo():
         mail.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         mail.select("INBOX")
 
-        _, data = mail.search(None, "FROM", f'"{VENMO_FROM}"')
+        # Limit search to last 7 days — a stream won't span longer than that
+        since_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%d-%b-%Y")
+        _, data = mail.search(None, "FROM", f'"{VENMO_FROM}"', "SINCE", since_date)
         uids = data[0].split() if data and data[0] else []
 
         for uid in uids:
@@ -181,7 +169,6 @@ def venmo():
                 continue
             msg = email_lib.message_from_bytes(msg_data[0][1])
 
-            # Parse email date and skip if before stream start
             date_str = msg.get("Date", "")
             try:
                 email_ts = email.utils.parsedate_to_datetime(date_str).timestamp()

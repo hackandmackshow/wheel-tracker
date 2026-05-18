@@ -18,4 +18,4 @@ COPY . .
 RUN useradd -r -m -s /bin/false appuser
 USER appuser
 
-CMD ["/app/.venv/bin/gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "--timeout", "60", "--worker-tmp-dir", "/dev/shm", "server:app"]
+CMD ["/app/.venv/bin/gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "60", "--worker-tmp-dir", "/dev/shm", "server:app"]
