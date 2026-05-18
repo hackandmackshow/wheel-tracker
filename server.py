@@ -16,7 +16,6 @@ import re
 import imaplib
 import email as email_lib
 import email.utils
-import socket
 from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -153,8 +152,8 @@ def venmo():
     mail    = None
 
     try:
-        socket.setdefaulttimeout(15)
-        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        # timeout=10 applies to all socket operations on this connection
+        mail = imaplib.IMAP4_SSL("imap.gmail.com", timeout=10)
         mail.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         mail.select("INBOX")
 
@@ -164,7 +163,8 @@ def venmo():
         uids = data[0].split() if data and data[0] else []
 
         for uid in uids:
-            _, msg_data = mail.fetch(uid, "(RFC822)")
+            # Fetch headers only — much faster and lighter than full RFC822
+            _, msg_data = mail.fetch(uid, "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT MESSAGE-ID)])")
             if not msg_data or not msg_data[0]:
                 continue
             msg = email_lib.message_from_bytes(msg_data[0][1])
@@ -192,17 +192,16 @@ def venmo():
 
     except imaplib.IMAP4.error as e:
         error = f"Email login failed: {e}. Check EMAIL_ADDRESS and EMAIL_APP_PASSWORD."
-    except socket.timeout:
+    except (TimeoutError, socket.timeout):
         error = "Gmail connection timed out. Try again."
     except Exception as e:
         error = str(e)
     finally:
         if mail:
             try:
-                mail.logout()
+                mail.shutdown()  # close socket directly — avoids hanging on LOGOUT
             except Exception:
                 pass
-        socket.setdefaulttimeout(None)
 
     return jsonify({"entries": entries, "error": error})
 
